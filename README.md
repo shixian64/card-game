@@ -4,6 +4,8 @@
 
 交给其他模型或开发者继续开发，请先阅读 [详细开发规格与交接文档](docs/DEVELOPMENT_HANDOFF.md)，也可直接使用 [下一模型启动提示词](docs/NEXT_MODEL_PROMPT.md)。文档涵盖现有实现、玩法规则、接口、数据、部署、已知问题及后续验收任务。
 
+本仓库根目录就是应用目录。`artifacts/` 包含关键验收截图与平衡记录；`design/` 和部分 `docs/` 保存历史设计，不代表当前玩法。
+
 ## 快速启动
 
 Node.js 24，在本目录执行：
@@ -26,7 +28,7 @@ npm run build
 npm start
 ```
 
-正式启动前复制 `.env.example` 为 `.env` 并配置来源、OAuth 与管理员白名单。完整说明：[自托管](../docs/self-hosting.md)。
+正式启动前复制 `.env.example` 为 `.env` 并配置来源、OAuth 与管理员白名单。完整说明：[自托管](docs/self-hosting.md)。
 
 ## 代码入口
 
@@ -51,7 +53,7 @@ npm start
 
 36 种星灵有独立技能配置，分为 5 种职业（坦克、战士、射手、法师、刺客），共享 6 幅原创插画。强化每升一阶仅增加 3% 生命 / 2% 攻击，主要提供视觉进阶。服务器保存账户资产；市场支持紧凑列表、筛选分页、真实成交行情与个人记录；挂单、赠送、好友和世界 / 私聊保持可用。交易只使用游戏内星币，没有真实充值或现金交易。聊天使用短轮询更新。
 
-本轮代码只在本地；旧 Sites 站点未更新。ChatGPT OAuth 缺少真实 Client ID，尚未完成外部登录联调。Docker 仅提供部署配置，未替用户部署远程服务器。
+代码在本地开发，GitHub 用于源码交接；旧 Sites 站点未更新。ChatGPT OAuth 缺少真实 Client ID，尚未完成外部登录联调。Docker 仅提供部署配置，未替用户部署远程服务器。
 
 ## 10 分钟局内经济
 
@@ -69,4 +71,4 @@ npm start
 
 已登录且账户数据加载完成后，对战页使用全视口游戏布局。离开对战恢复原页面滚动与导航。返回大厅只改变页面、不退出或暂停对局；系统全屏依赖浏览器权限，失败时保留满视口界面。
 
-场景文件：`public/art/arena-forest-v1.png`；完整生成说明：`../artifacts/arena-forest-v1-prompt.md`。
+场景文件：`public/art/arena-forest-v1.png`；完整生成说明：[场景提示词](artifacts/arena-forest-v1-prompt.md)。

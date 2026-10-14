@@ -12,6 +12,7 @@
 - 先完整阅读：`D:\project\game\game-1011\web\docs\DEVELOPMENT_HANDOFF.md`。
 - 截图 / 测试 / 平衡证据：`D:\project\game\game-1011\artifacts`。
 - 全程中文输出，代码标识与命令保持原样。
+- GitHub 仓库为 `shixian64/card-game`；克隆目录根就是本机 web，直接运行 npm 命令。仓库内 artifacts / design / scripts 含已筛选的交接材料，不含真实运行数据。
 
 ## 已确认方向
 
@@ -21,7 +22,7 @@
 
 ## 接手约束
 
-1. 先查看 git status，保护大量未提交 / 未跟踪文件，不 reset / clean。
+1. 基线代码已提交为 a883741；接手仍先查看 git status，保护后续未提交 / 未跟踪文件，不 reset / clean。
 2. Node.js≥24，web 内跑 npm.cmd test 和 npm.cmd run build；交接基线407项通过。
 3. 主入口 main.tsx→CombatApp，/admin→Admin；App.tsx是历史旧版。
 4. 服务器是资产、计时、战果和结算权威；不从localStorage导入余额。

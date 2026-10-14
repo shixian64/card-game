@@ -11,3 +11,9 @@ qa/
 !.env.example
 data/
 *.log
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+*.db
+*.zip
+*.tar.gz

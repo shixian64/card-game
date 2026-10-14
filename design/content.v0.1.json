@@ -1,0 +1,343 @@
+{
+  "schemaVersion": 1,
+  "contentVersion": "0.1.0-design",
+  "status": "DESIGN_ONLY",
+  "title": "卡牌工坊",
+  "notes": [
+    "基础配方与目标用于可行性验证，不代表已经完成平衡设计。",
+    "专精分支目前只有设计描述，模拟器不应用这些效果。",
+    "模拟库存不构成正式游戏资产；卡池权重不是已上线的抽卡服务。"
+  ],
+  "rules": {
+    "rows": 2,
+    "columns": 3,
+    "maxActiveCards": 4,
+    "maxRosterCards": 6,
+    "rounds": 6,
+    "adjustmentsPerRoundAfterFirst": 1,
+    "sameRoundOutputConsumption": false,
+    "maxRecipeExecutionsPerCardPerRound": 1
+  },
+  "items": [
+    {
+      "id": "fiber",
+      "name": "纤维",
+      "tier": 0
+    },
+    {
+      "id": "dew",
+      "name": "露水",
+      "tier": 0
+    },
+    {
+      "id": "resin",
+      "name": "树脂",
+      "tier": 1
+    },
+    {
+      "id": "ink",
+      "name": "灵墨",
+      "tier": 1
+    },
+    {
+      "id": "crystal",
+      "name": "晶核",
+      "tier": 2
+    },
+    {
+      "id": "sigil",
+      "name": "纹章",
+      "tier": 2
+    }
+  ],
+  "recipes": [
+    {
+      "id": "grow_fiber",
+      "inputs": {},
+      "outputs": {
+        "fiber": 2
+      }
+    },
+    {
+      "id": "collect_dew",
+      "inputs": {},
+      "outputs": {
+        "dew": 2
+      }
+    },
+    {
+      "id": "refine_resin",
+      "inputs": {
+        "fiber": 2
+      },
+      "outputs": {
+        "resin": 1
+      }
+    },
+    {
+      "id": "mix_ink",
+      "inputs": {
+        "fiber": 1,
+        "dew": 1
+      },
+      "outputs": {
+        "ink": 1
+      }
+    },
+    {
+      "id": "condense_crystal",
+      "inputs": {
+        "resin": 1,
+        "dew": 1
+      },
+      "outputs": {
+        "crystal": 1
+      }
+    },
+    {
+      "id": "inscribe_sigil",
+      "inputs": {
+        "resin": 1,
+        "ink": 1
+      },
+      "outputs": {
+        "sigil": 1
+      }
+    }
+  ],
+  "cards": [
+    {
+      "id": "moss_sprite",
+      "name": "苔芽灵",
+      "rarity": "C",
+      "baseRecipeId": "grow_fiber",
+      "starter": true,
+      "branches": [
+        {
+          "id": "dense_growth",
+          "name": "密植",
+          "designIntent": "邻接伙伴时擅长生产，失去灵活摆位空间。"
+        },
+        {
+          "id": "solitary_growth",
+          "name": "独生",
+          "designIntent": "附近留空时擅长生产，与其他卡位争夺空间。"
+        }
+      ]
+    },
+    {
+      "id": "dew_sprite",
+      "name": "露珠灵",
+      "rarity": "C",
+      "baseRecipeId": "collect_dew",
+      "starter": true,
+      "branches": [
+        {
+          "id": "rain_collector",
+          "name": "集雨",
+          "designIntent": "集中产水，适合高耗水配方。"
+        },
+        {
+          "id": "water_recycler",
+          "name": "回流",
+          "designIntent": "与耗水伙伴邻接时回收部分露水，每轮有限触发。"
+        }
+      ]
+    },
+    {
+      "id": "ember_moth",
+      "name": "炉火蛾",
+      "rarity": "C",
+      "baseRecipeId": "refine_resin",
+      "starter": true,
+      "branches": [
+        {
+          "id": "economical_fire",
+          "name": "节料",
+          "designIntent": "偏低投入、小批量、稳定产出。"
+        },
+        {
+          "id": "batch_fire",
+          "name": "聚炉",
+          "designIntent": "偏集中投入、大批量，占用原料与加工轮次。"
+        }
+      ]
+    },
+    {
+      "id": "ink_snail",
+      "name": "调墨蜗",
+      "rarity": "C",
+      "baseRecipeId": "mix_ink",
+      "starter": true,
+      "branches": [
+        {
+          "id": "dry_ink",
+          "name": "干调",
+          "designIntent": "以更多纤维换取较低耗水，适应缺水目标。"
+        },
+        {
+          "id": "wet_ink",
+          "name": "湿调",
+          "designIntent": "以更多露水换取较低纤维消耗，适应缺纤维目标。"
+        }
+      ]
+    },
+    {
+      "id": "prism_bird",
+      "name": "棱光雀",
+      "rarity": "R",
+      "baseRecipeId": "condense_crystal",
+      "starter": false,
+      "branches": [
+        {
+          "id": "steady_crystal",
+          "name": "稳凝",
+          "designIntent": "偏持续的小批量晶核生产。"
+        },
+        {
+          "id": "batch_crystal",
+          "name": "簇晶",
+          "designIntent": "偏储存原料后的一次大批量生产。"
+        }
+      ]
+    },
+    {
+      "id": "scribe_beetle",
+      "name": "刻纹甲",
+      "rarity": "R",
+      "baseRecipeId": "inscribe_sigil",
+      "starter": false,
+      "branches": [
+        {
+          "id": "ink_etch",
+          "name": "墨刻",
+          "designIntent": "纹章配方更多依赖灵墨，节约树脂。"
+        },
+        {
+          "id": "resin_etch",
+          "name": "树刻",
+          "designIntent": "纹章配方更多依赖树脂，节约灵墨。"
+        }
+      ]
+    }
+  ],
+  "pack": {
+    "id": "workshop_study_pack",
+    "status": "WEIGHTS_ONLY_NOT_IMPLEMENTED",
+    "entries": [
+      {
+        "cardId": "moss_sprite",
+        "weight": 2000
+      },
+      {
+        "cardId": "dew_sprite",
+        "weight": 2000
+      },
+      {
+        "cardId": "ember_moth",
+        "weight": 2000
+      },
+      {
+        "cardId": "ink_snail",
+        "weight": 2000
+      },
+      {
+        "cardId": "prism_bird",
+        "weight": 1000
+      },
+      {
+        "cardId": "scribe_beetle",
+        "weight": 1000
+      }
+    ]
+  },
+  "scenario": {
+    "id": "starter_balanced_production",
+    "initialStock": {},
+    "board": [
+      "moss_sprite",
+      "dew_sprite",
+      "ember_moth",
+      "ink_snail",
+      null,
+      null
+    ],
+    "target": {
+      "resin": 3,
+      "ink": 3
+    },
+    "witnessPriorities": [
+      [
+        "moss_sprite",
+        "dew_sprite",
+        "ember_moth",
+        "ink_snail"
+      ],
+      [
+        "moss_sprite",
+        "dew_sprite",
+        "ember_moth",
+        "ink_snail"
+      ],
+      [
+        "moss_sprite",
+        "dew_sprite",
+        "ink_snail",
+        "ember_moth"
+      ],
+      [
+        "moss_sprite",
+        "dew_sprite",
+        "ember_moth",
+        "ink_snail"
+      ],
+      [
+        "moss_sprite",
+        "dew_sprite",
+        "ink_snail",
+        "ember_moth"
+      ],
+      [
+        "moss_sprite",
+        "dew_sprite",
+        "ember_moth",
+        "ink_snail"
+      ]
+    ]
+  },
+  "goalTemplates": [
+    {
+      "id": "balanced_order",
+      "target": {
+        "resin": 3,
+        "ink": 3
+      },
+      "witness": "alternating_priority"
+    },
+    {
+      "id": "resin_order",
+      "target": {
+        "resin": 5
+      },
+      "witness": "resin_first"
+    },
+    {
+      "id": "ink_order",
+      "target": {
+        "ink": 5
+      },
+      "witness": "ink_first"
+    }
+  ],
+  "deferred": [
+    "branch_recipe_numbers",
+    "adjacency_effects",
+    "environment_modifiers",
+    "order_reward_formula",
+    "order_budget_values",
+    "card_growth_costs",
+    "server_assets",
+    "persistent_workshops",
+    "real_player_market"
+  ]
+}

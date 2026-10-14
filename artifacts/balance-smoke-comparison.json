@@ -1,0 +1,150 @@
+{
+  "baselineFile": "D:/project/game/game-1011/artifacts/balance-smoke-before-tank-fix.json",
+  "generatedAt": "2026-10-14T15:19:28.889Z",
+  "validation": {
+    "fullTests": {
+      "command": "npm test",
+      "tests": 374,
+      "passed": 374,
+      "failed": 0,
+      "skipped": 0,
+      "exitCode": 0
+    },
+    "coreUnchangedDuringRun": true,
+    "coreSourceModifiedThisTask": false,
+    "engineSha256": "e21108d4cc7bb6544447c1e7fdef695552c2a782331d32f830fef55c522d0db6",
+    "sameSeeds": true,
+    "sameCompositions": true,
+    "samePopulation": true,
+    "sameRanksAndStars": true,
+    "sameBaseStats": true,
+    "ruleChangesExpected": true,
+    "matchesPreviousAfter": true
+  },
+  "before": {
+    "battles": 540,
+    "timeouts": 115,
+    "timeoutRatePct": 21.3,
+    "zeroTailDamage": 14,
+    "deadlocks": 0,
+    "meanRounds": 19.52
+  },
+  "after": {
+    "battles": 540,
+    "timeouts": 15,
+    "timeoutRatePct": 2.78,
+    "zeroTailDamage": 0,
+    "deadlocks": 0,
+    "meanRounds": 17.28
+  },
+  "compositions": [
+    {
+      "id": "balanced",
+      "name": "均衡五职业",
+      "beforeWinRate": 21.7,
+      "afterWinRate": 23.3,
+      "beforeTimeoutRate": 13.3,
+      "afterTimeoutRate": 0,
+      "beforeMeanRounds": 20.2,
+      "afterMeanRounds": 16.4,
+      "beforeZeroTailDamage": 1,
+      "afterZeroTailDamage": 0
+    },
+    {
+      "id": "tank_marksman",
+      "name": "三坦三射",
+      "beforeWinRate": 93.3,
+      "afterWinRate": 83.3,
+      "beforeTimeoutRate": 31.7,
+      "afterTimeoutRate": 1.7,
+      "beforeMeanRounds": 23.1,
+      "afterMeanRounds": 18.6,
+      "beforeZeroTailDamage": 9,
+      "afterZeroTailDamage": 0
+    },
+    {
+      "id": "tank_mage",
+      "name": "三坦三法",
+      "beforeWinRate": 65,
+      "afterWinRate": 45,
+      "beforeTimeoutRate": 51.7,
+      "afterTimeoutRate": 1.7,
+      "beforeMeanRounds": 25.6,
+      "afterMeanRounds": 20.6,
+      "beforeZeroTailDamage": 2,
+      "afterZeroTailDamage": 0
+    },
+    {
+      "id": "clustered_mages",
+      "name": "法师扎堆",
+      "beforeWinRate": 35,
+      "afterWinRate": 50,
+      "beforeTimeoutRate": 0,
+      "afterTimeoutRate": 0,
+      "beforeMeanRounds": 12,
+      "afterMeanRounds": 11.8,
+      "beforeZeroTailDamage": 0,
+      "afterZeroTailDamage": 0
+    },
+    {
+      "id": "spread_mages",
+      "name": "法师分散",
+      "beforeWinRate": 13.3,
+      "afterWinRate": 16.7,
+      "beforeTimeoutRate": 0,
+      "afterTimeoutRate": 0,
+      "beforeMeanRounds": 12.2,
+      "afterMeanRounds": 12.1,
+      "beforeZeroTailDamage": 0,
+      "afterZeroTailDamage": 0
+    },
+    {
+      "id": "assassin_core",
+      "name": "双坦四刺",
+      "beforeWinRate": 76.7,
+      "afterWinRate": 73.3,
+      "beforeTimeoutRate": 18.3,
+      "afterTimeoutRate": 1.7,
+      "beforeMeanRounds": 22.9,
+      "afterMeanRounds": 19.2,
+      "beforeZeroTailDamage": 0,
+      "afterZeroTailDamage": 0
+    },
+    {
+      "id": "all_assassins",
+      "name": "全刺客",
+      "beforeWinRate": 25,
+      "afterWinRate": 35,
+      "beforeTimeoutRate": 0,
+      "afterTimeoutRate": 0,
+      "beforeMeanRounds": 14.9,
+      "afterMeanRounds": 14.4,
+      "beforeZeroTailDamage": 0,
+      "afterZeroTailDamage": 0
+    },
+    {
+      "id": "all_tanks",
+      "name": "全坦克",
+      "beforeWinRate": 58.3,
+      "afterWinRate": 43.3,
+      "beforeTimeoutRate": 76.7,
+      "afterTimeoutRate": 20,
+      "beforeMeanRounds": 29.6,
+      "afterMeanRounds": 27.5,
+      "beforeZeroTailDamage": 2,
+      "afterZeroTailDamage": 0
+    },
+    {
+      "id": "all_warriors",
+      "name": "全战士",
+      "beforeWinRate": 33.3,
+      "afterWinRate": 50,
+      "beforeTimeoutRate": 0,
+      "afterTimeoutRate": 0,
+      "beforeMeanRounds": 15.1,
+      "afterMeanRounds": 15,
+      "beforeZeroTailDamage": 0,
+      "afterZeroTailDamage": 0
+    }
+  ]
+}
