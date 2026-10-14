@@ -1,0 +1,276 @@
+/* Full-viewport battle mode. Collection, crafting and community retain the paper UI. */
+.combat-app.is-battle-immersive{position:fixed;inset:0;display:block;width:100%;height:100dvh;min-height:0;overflow:hidden;color:#e7e9d0;background:#112820 url('/art/arena-forest-v1.png') center center/cover no-repeat}
+.combat-app.is-battle-immersive:before{content:'';position:absolute;inset:0;pointer-events:none;z-index:0;background:linear-gradient(180deg,#03120f75 0,transparent 19%,transparent 64%,#0315109c 100%),linear-gradient(90deg,#03171088,transparent 22%,transparent 78%,#0618118c)}
+.combat-app.is-battle-immersive>.sidebar,.combat-app.is-battle-immersive>.mobile-shade,.combat-app.is-battle-immersive .app-body>.topbar{display:none!important}
+.combat-app.is-battle-immersive>.app-body{position:relative;z-index:1;margin:0;padding:0;width:100%;height:100%;min-width:0;max-width:none}
+.combat-app.is-battle-immersive .combat-page-battle{position:relative;width:100%;height:100%;min-height:0;max-width:none;margin:0;padding:0!important;overflow:hidden;background:transparent}
+.combat-app.is-battle-immersive .combat-connection-error{position:absolute;left:50%;top:66px;z-index:150;transform:translateX(-50%);max-width:calc(100% - 40px);background:#24352de8;border-color:#b99a53;color:#eddaa7}
+.combat-app.is-battle-immersive>.toast{bottom:180px;z-index:200;background:#102a24ee;color:#ead9ac;border-color:#b29b5b}
+.combat-battle-tools{position:absolute;right:16px;top:14px;display:flex;align-items:center;gap:7px;z-index:130;height:33px}
+.combat-battle-tools>button{width:32px;height:32px;display:grid;place-items:center;border:1px solid #b7a77359;background:#0a211cdd;color:#e5d3a1;border-radius:4px;padding:0}
+.combat-battle-tools>button:hover{background:#234437}
+.combat-battle-tools .account-toggle{height:32px;min-height:32px;max-width:140px;background:#0a211cdd;border:1px solid #b7a77359;color:#d9d9c0;font-size:10px;border-radius:4px}
+.combat-battle-tools .account-toggle svg{width:13px;height:13px}
+.combat-battle-tools .account-popover{z-index:180;background:#132b25;color:#dcd9bd;border-color:#8e8055}
+.combat-battle-tools .account-popover button{color:#e0d8b9}
+.combat-battle-tools .account-popover p,.combat-battle-tools .account-popover small{color:#b7c0a6}
+.combat-battle-tools button:focus-visible{outline:2px solid #f0ce75;outline-offset:3px}
+.immersive-battle{--deploy-cell-height:80px;--deploy-card-width:53px;--battle-live-height:clamp(340px,calc(100dvh - var(--arena-top,64px) - var(--arena-dock-height,164px) - 84px),520px);--battle-live-card-width:calc(var(--battle-live-height) / 8 * .66)}
+.immersive-battle .battle-arena.embedded{position:relative;max-width:none;width:100%;height:100%;min-height:0;margin:0;color:#d9dfc6}
+.immersive-battle .battle-arena.embedded>.battle-heading{display:none}
+.immersive-battle .battle-builder-layout{position:absolute;inset:0 0 104px;display:block!important;min-height:0}
+.immersive-battle .battle-deployment{position:absolute;left:var(--arena-left,182px);right:var(--arena-right,170px);top:0;bottom:0;display:flex;flex-direction:column;justify-content:center;align-items:center;background:none;border:0;border-radius:0;box-shadow:none;padding:0;overflow:visible}
+.immersive-battle .battle-board-top,.immersive-battle .battle-deploy-labels,.immersive-battle .battle-deploy-board,.immersive-battle .battle-deploy-actions{width:min(100%,660px);max-width:660px}
+.immersive-battle .battle-board-top{border:0;padding:3px 12px 8px;min-height:36px}
+.immersive-battle .battle-board-top>span{font-size:10px;color:#e6d7a5;text-shadow:0 2px 5px #173023}
+.immersive-battle .battle-board-top>button{min-height:29px;padding:5px 10px;font-size:10px;border-color:#d7c58b77;background:#102b21d6;color:#e3d19f}
+.immersive-battle .battle-deploy-labels{padding:2px 12px 7px;color:#ded1a3;font-size:10px;text-shadow:0 1px 5px #193124}
+.immersive-battle .battle-deploy-labels>small{font-size:9px;color:#bdcba8}
+.immersive-battle .battle-deploy-labels.bottom{padding:7px 12px 3px;color:#d6dcb9}
+.immersive-battle .battle-deploy-board{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px;padding:0 10px}
+.immersive-battle .battle-deploy-cell{height:var(--deploy-cell-height)!important;aspect-ratio:auto;border:1px solid #c2b47c47;border-radius:4px;background:linear-gradient(145deg,#d3c78f0a,#162d190a);box-shadow:inset 0 1px 0 #efdf9f12,0 1px 3px #17362413}
+.immersive-battle .battle-deploy-cell.in-range{border-color:#d5c27d;outline:1px solid #dec78045;outline-offset:1px;background:#ead18c22;box-shadow:inset 0 0 15px #f0d9901f}
+.immersive-battle .battle-slot,.immersive-battle .battle-slot.filled{width:100%;height:100%;background:none;border:0;box-shadow:none;border-radius:3px}
+.immersive-battle .battle-slot.selected{outline:0;box-shadow:inset 0 0 0 2px #f2d17d,0 0 16px #f0cb7240}
+.immersive-battle .battle-slot.filled:before,.immersive-battle .battle-slot.filled:after{display:none}
+.immersive-battle .battle-slot.empty.can-place{border:0;background:#d7bb5e09}
+.immersive-battle .battle-slot.empty .battle-slot-main{color:#cfca9a75;gap:4px}
+.immersive-battle .battle-slot.empty .battle-slot-main>span:last-child{font-size:8px;color:#d3d2ae7d}
+.immersive-battle .battle-slot-number{font-size:8px;left:5px;top:4px;color:#e5dbb15e}
+.immersive-battle .battle-slot.filled .battle-slot-main{position:absolute;top:-1px;left:50%;transform:translateX(-50%);width:var(--deploy-card-width);height:calc(var(--deploy-cell-height) + 1px);border:1px solid var(--rarity,#b9bd93);border-radius:4px;box-shadow:0 5px 9px #031c18a6,0 0 7px #e8dba333;overflow:hidden}
+.immersive-battle .battle-slot.filled[data-rank="2"] .battle-slot-main{border-color:#d7eee3;box-shadow:0 0 0 1px #c7e2d44f,0 5px 9px #061c17b3}
+.immersive-battle .battle-slot.filled[data-rank="3"] .battle-slot-main{border-color:#ffe39b;box-shadow:0 0 0 1px #c5a954,0 0 15px #ebd38b7a,0 5px 9px #061c17b3}
+.immersive-battle .battle-slot-main>img{object-position:center 32%}
+.immersive-battle .battle-slot .battle-rarity,.immersive-battle .battle-slot-affinity{display:none}
+.immersive-battle .battle-slot-caption{left:3px;right:3px;bottom:5px}
+.immersive-battle .battle-slot-caption>strong{font-size:9px;line-height:1.3;text-align:center;letter-spacing:-.2px}
+.immersive-battle .battle-slot-caption>span{display:none!important}
+.immersive-battle .battle-slot-level{right:auto;left:50%;transform:translateX(-50%);bottom:21px;padding:1px 3px;font-size:8px;line-height:1;color:#ffe09a;background:#162d25b8;border-color:#dac78257;white-space:nowrap}
+.immersive-battle .battle-slot-remove{right:calc(50% - var(--deploy-card-width) / 2 - 3px);top:-5px;width:17px;height:17px;background:#0e2b22f2;border-color:#bdb98b8c;color:#e6d5a2;z-index:8}
+.immersive-battle .battle-slot-remove svg{width:10px;height:10px}
+.immersive-battle .battle-slot-selected{font-size:7px;line-height:1.6;padding:3px;color:#ffebb4;background:#213824c2}
+.immersive-battle .battle-board-hint{display:none}
+.immersive-battle .battle-deploy-actions{padding:7px 12px 0;border:0;background:none;min-height:44px}
+.immersive-battle .battle-deploy-actions>span{font-size:10px;color:#e0ddbc;text-shadow:0 1px 4px #102918}
+.immersive-battle .battle-deploy-actions b{font-size:20px;color:#f4d995}
+.immersive-battle .battle-clear{font-size:9px!important;color:#c2c8a2;background:#142d2380;border-radius:3px;padding:5px 8px}
+.immersive-battle .battle-primary{min-height:35px;padding:7px 16px;font-size:12px!important;background:linear-gradient(160deg,#bc9d53,#8c7139);border-color:#d2b979;color:#fff0c3;box-shadow:inset 0 1px 0 #ffebba55,0 3px 8px #071f1877}
+.immersive-battle .battle-primary:disabled{opacity:.5}
+/* Left floating context is separate from the stone battlefield. */
+.immersive-battle .battle-builder-inspector{position:absolute;left:12px;top:7px;bottom:0;width:calc(var(--arena-left,182px) - 26px);display:flex!important;flex-direction:column;gap:9px;max-height:none;overflow:auto;scrollbar-width:thin;scrollbar-color:#9d96604f transparent;padding:0 0 4px;background:none;border:0}
+.immersive-battle .battle-builder-inspector>.battle-synergies{order:0}
+.immersive-battle .battle-builder-inspector>.battle-card-detail,.immersive-battle .battle-builder-inspector>.battle-inspect-hint{order:1}
+.immersive-battle .battle-synergies,.immersive-battle .battle-card-detail,.immersive-battle .battle-inspect-hint,.immersive-battle .battle-events,.immersive-battle .battle-ranking{border:1px solid #b8a56d5e;border-radius:4px;background:linear-gradient(135deg,#0c261ce8,#0b201be0);box-shadow:0 5px 13px #051e1952;backdrop-filter:blur(6px);padding:11px 10px;color:#c6ceb0}
+.immersive-battle .battle-panel-heading{gap:5px}
+.immersive-battle .battle-panel-heading>div{gap:5px}
+.immersive-battle .battle-panel-heading h2{font-size:11px;color:#e1d8ac}
+.immersive-battle .battle-panel-heading>div>svg{width:12px;height:12px;color:#c1aa68}
+.immersive-battle .battle-panel-heading>span{font-size:8px;color:#b6bb93}
+.immersive-battle .battle-synergies>p{font-size:8px;line-height:1.6;color:#96a989;margin:6px 0 7px}
+.immersive-battle .battle-synergies.compact .battle-synergy-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:3px 5px}
+.immersive-battle .battle-synergies.compact .battle-synergy{grid-template-columns:19px minmax(0,1fr);gap:2px 4px;padding:5px 0;border-bottom:1px solid #8a9a6e1c;background:none;opacity:.58}
+.immersive-battle .battle-synergies.compact .battle-synergy-count{height:23px;min-width:19px;font-size:9px;background:#314332;color:#b9c3a1;border:1px solid #859b6340}
+.immersive-battle .battle-synergy-count>i{font-size:7px}
+.immersive-battle .battle-synergies.compact .battle-synergy b{font-size:8px;line-height:1.2;color:#d1d6b4;white-space:nowrap}
+.immersive-battle .battle-synergies.compact .battle-synergy>em{font-size:7px;color:#a9b48d}
+.immersive-battle .battle-synergies.compact .battle-synergy.active{opacity:1}
+.immersive-battle .battle-synergies.compact .battle-synergy.active b{color:#eddca4}
+.immersive-battle .battle-synergies.compact .battle-synergy.active .battle-synergy-count{color:#f7e8b6;background:#6b7141;border-color:#c3b376}
+.immersive-battle .battle-synergies.compact .battle-synergy[aria-pressed="true"]{background:#a9aa6740}
+.immersive-battle .battle-synergy-explain{min-height:0;font-size:8px!important;color:#adb693!important;margin-top:7px!important;line-height:1.7!important}
+.immersive-battle .battle-synergy-explain>b{color:#decca0}
+.immersive-battle .battle-card-detail{display:block;margin:0;padding:9px 10px;border-bottom:1px solid #b8a56d5e}
+.immersive-battle .battle-detail-top{gap:7px}
+.immersive-battle .battle-detail-top>img{width:36px;height:46px;border-color:#bda76a;border-radius:3px}
+.immersive-battle .battle-detail-top h2{font-size:13px;color:#e4d9b5;line-height:1.4;margin:3px 0}
+.immersive-battle .battle-detail-top span{font-size:7px;color:#b2b592;line-height:1.5}
+.immersive-battle .battle-detail-top p{font-size:8px;color:#afbc97}
+.immersive-battle .battle-detail-stars{font-size:8px;color:#dbbf7a;margin-top:3px}
+.immersive-battle .battle-stat-grid{margin:10px 0;gap:8px 6px}
+.immersive-battle .battle-stat-grid dt{font-size:8px;color:#91a683;margin-bottom:3px}
+.immersive-battle .battle-stat-grid dd{font-size:14px;color:#dfd8b4}
+.immersive-battle .battle-stat-grid dd>small{font-size:8px;color:#b1b895}
+.immersive-battle .battle-detail-skill{font-size:8px;line-height:1.7;color:#aab797}
+.immersive-battle .battle-detail-skill>b{font-size:9px;color:#d4bd7f;gap:4px}
+.immersive-battle .battle-detail-skill>b>svg{width:10px}
+.immersive-battle .battle-detail-note{display:none}
+.immersive-battle .battle-inspect-hint{padding:12px 9px;margin:0;text-align:center}
+.immersive-battle .battle-inspect-hint>svg{width:19px;height:19px;color:#a5aa79}
+.immersive-battle .battle-inspect-hint>p{font-size:11px;color:#c2c9a5;margin:6px 0}
+.immersive-battle .battle-inspect-hint>span{font-size:8px;color:#93a685;line-height:1.7}
+.immersive-battle .battle-inspector-toggle{display:none}
+/* Bench is a compact horizontal hand, not a second gallery. */
+.immersive-battle .battle-roster-toolbar{position:absolute;left:var(--arena-left,182px);right:var(--arena-right,170px);bottom:80px;display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:10px;margin:0;height:24px}
+.immersive-battle .battle-roster-toolbar h2{font-size:10px;line-height:1;color:#dbd5ad;text-shadow:0 1px 3px #102219}
+.immersive-battle .battle-roster-toolbar h2>span{font-size:9px;color:#b6bd91}
+.immersive-battle .battle-roster-toolbar p{display:none}
+.immersive-battle .battle-roster-toolbar>label{min-width:0;width:150px;height:23px;padding:4px 7px;border-color:#aa9a6466;background:#102b22d9;border-radius:3px;color:#b6ba91}
+.immersive-battle .battle-roster-toolbar input{font-size:9px;color:#d5d8b6}
+.immersive-battle .battle-roster-toolbar input::placeholder{color:#9aa988}
+.immersive-battle .battle-roster-toolbar>label>svg{width:11px;height:11px}
+.immersive-battle .battle-roster{position:absolute;bottom:5px;left:var(--arena-left,182px);right:var(--arena-right,170px);display:flex!important;flex-wrap:nowrap;align-items:flex-start;gap:8px;height:73px;min-height:0;max-height:73px;padding:4px 3px 6px;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;scrollbar-color:#cbbd7f65 #10281a55}
+.immersive-battle .battle-bench-card{position:relative;flex:0 0 115px;width:115px;height:61px;min-height:61px}
+.immersive-battle .battle-bench-card>.battle-pick{width:100%;height:61px;min-height:61px;display:grid;grid-template-columns:42px minmax(0,1fr);align-items:stretch;border:1px solid #b7a2727a;border-radius:3px;background:#10281fe8;box-shadow:0 3px 6px #061f175c;overflow:hidden}
+.immersive-battle .battle-pick:hover,.immersive-battle .battle-pick.selected{transform:none;border-color:#e8cc82;outline-offset:1px}
+.immersive-battle .battle-pick.placed{background:#35432bdc;border-color:#baae6880}
+.immersive-battle .battle-pick-art{height:61px;width:42px;aspect-ratio:auto;border-radius:2px 0 0 2px}
+.immersive-battle .battle-pick-art>img{object-fit:cover;object-position:center 35%}
+.immersive-battle .battle-pick .battle-rarity,.immersive-battle .battle-pick-rank,.immersive-battle .battle-pick-affinity{display:none}
+.immersive-battle .battle-pick-stars{top:3px;left:3px;font-size:8px;letter-spacing:0;color:#f6da8f}
+.immersive-battle .battle-pick-status{bottom:3px;right:3px;font-size:0;background:#aeb077cc;color:#1d2d1b;border-radius:2px;padding:1px}
+.immersive-battle .battle-pick-status>svg{width:10px;height:10px}
+.immersive-battle .battle-pick-copy{padding:7px 5px 18px;min-width:0}
+.immersive-battle .battle-pick-copy>strong{font-size:9px;line-height:1.4;color:#e7ddba}
+.immersive-battle .battle-pick-copy>span{font-size:8px;line-height:1.4;color:#abb894;gap:3px;margin-top:4px}
+.immersive-battle .battle-pick-copy>span>svg{width:9px;height:9px}
+.immersive-battle .battle-pick-copy small,.immersive-battle .battle-pick-copy p{display:none}
+.immersive-battle .battle-sell-unit{position:absolute;bottom:4px;right:4px;width:auto;min-height:16px;padding:1px 5px;font-size:8px!important;line-height:1.5;border:1px solid #ab996162;border-radius:2px;background:#213b2b;color:#cabb8c;z-index:7}
+.immersive-battle .battle-sell-unit>small{display:none}
+.immersive-battle .battle-sell-unit:hover{background:#5c6138;color:#f2e3ae}
+.immersive-battle .battle-empty{position:absolute;left:var(--arena-left,182px);right:var(--arena-right,170px);bottom:17px;padding:14px;margin:0;text-align:center;font-size:10px;color:#c6ceb0;background:#16322480;border:1px dashed #b4b0834d;border-radius:4px}
+.immersive-battle .battle-rules,.immersive-battle .battle-footnote{display:none}
+/* Live combat uses the same scene, transparent cells and portrait-shaped moving cards. */
+.immersive-battle .battle-live-layout{position:relative;display:block!important;width:100%;height:100%;min-height:0}
+.immersive-battle .battle-live-layout>div:first-child{position:absolute;left:var(--arena-left,182px);right:var(--arena-right,170px);top:0;bottom:0;display:flex;align-items:center;justify-content:flex-start;flex-direction:column;min-height:0}
+.immersive-battle .battle-field{position:relative;width:min(100%,680px);padding:0 10px;border:0;border-radius:0;background:none;box-shadow:none;overflow:visible}
+.immersive-battle .battle-side-label{width:min(100%,660px);margin:3px auto 7px;padding:0 3px;font-size:10px;color:#e2d7ab;text-shadow:0 1px 4px #0f281b}
+.immersive-battle .battle-side-label>small{font-size:9px;color:#c5ccab}
+.immersive-battle .battle-side-label.own{margin-top:7px;margin-bottom:0;color:#d1e2ba}
+.immersive-battle .battle-tactics-board{height:var(--battle-live-height)!important;width:100%;max-width:660px!important;aspect-ratio:auto;margin:0 auto}
+.immersive-battle .battle-board-grid{gap:4px}
+.immersive-battle .battle-board-grid>span{border:1px solid #d4c58a45;border-radius:3px;background:linear-gradient(140deg,#d1ce9d0a,#21392104);box-shadow:inset 0 1px 0 #f9eac50d}
+.immersive-battle .battle-board-grid>.enemy-cell{border-color:#e4c7a343;background:#d0bd9410}
+.immersive-battle .battle-board-grid>.battle-midline{border-bottom-color:#e0ca8488}
+.immersive-battle .battle-field-watermark{color:#e7d89d26;letter-spacing:.3em;font-size:11px}
+.immersive-battle .battle-live-unit{width:var(--battle-live-card-width);height:calc(var(--battle-live-height) / 8 - 4px);margin-top:2px;margin-left:calc(100% / 14 - var(--battle-live-card-width) / 2);background:#0f2b22;border-radius:3px;box-shadow:0 4px 8px #082118b3}
+.immersive-battle .battle-live-unit .battle-rarity{display:none}
+.immersive-battle .battle-live-rank{font-size:7px;top:3px;right:3px;color:#f4d48e}
+.immersive-battle .battle-live-info{left:2px;right:2px;bottom:3px}
+.immersive-battle .battle-live-info>strong{font-size:8px;line-height:1.2;letter-spacing:-.2px}
+.immersive-battle .battle-hp-label{font-size:7px;line-height:1;margin-top:2px}
+.immersive-battle .battle-hp-label>b{font-size:6px}
+.immersive-battle .battle-hp-label small,.immersive-battle .battle-hp-label svg{display:none}
+.immersive-battle .battle-health{height:3px;margin-top:2px}
+.immersive-battle .battle-energy{height:2px;margin-top:2px}
+.immersive-battle .battle-impact>b{font-size:20px}
+.immersive-battle .battle-impact>.shield{font-size:11px}
+.immersive-battle .battle-fallen{font-size:10px}
+.immersive-battle .battle-skill-banner{min-width:166px;padding:7px 14px;background:#0a231cef;border-color:#e3cc8c80}
+.immersive-battle .battle-skill-banner b{font-size:17px}
+.immersive-battle .battle-playback{width:min(100%,660px);min-height:40px;margin:9px 0 0;border:1px solid #b9a36a5e;background:#0b241ee3;border-radius:4px}
+.immersive-battle .battle-playback-progress{height:2px;background:#47613c55}
+.immersive-battle .battle-playback-progress>span{background:#c4b16b}
+.immersive-battle .battle-playback-controls{padding:5px 8px;min-height:35px;flex-wrap:nowrap}
+.immersive-battle .battle-playback-caption{font-size:9px;color:#aaba96}
+.immersive-battle .battle-playback-controls>div{gap:5px}
+.immersive-battle .battle-playback-controls button{min-height:27px;padding:4px 7px;font-size:9px;color:#d5d5ac}
+.immersive-battle .battle-playback-controls .battle-speed{min-width:29px;border-color:#b9a36b5f;color:#dbcc9b}
+.immersive-battle .battle-playback-controls .battle-speed.active{background:#87854c5e!important}
+.immersive-battle .battle-playback-controls .battle-skip{color:#dfce91;background:#92854f29}
+.immersive-battle .battle-playback-controls button:not(:disabled):hover{background:#9aa56d38}
+.immersive-battle .battle-playback-controls button>svg{width:12px;height:12px}
+.immersive-battle .battle-live-sidebar{position:absolute;inset:0;display:contents!important;max-height:none;overflow:visible}
+.immersive-battle .battle-live-sidebar>.battle-synergies{position:absolute;left:12px;top:8px;width:calc(var(--arena-left,182px) - 26px);display:block!important;max-height:calc(100% - 26px);overflow:auto;scrollbar-width:thin}
+.immersive-battle .battle-live-sidebar>.battle-events,.immersive-battle .battle-live-sidebar>.battle-ranking{position:absolute;right:13px;top:120px;width:calc(var(--arena-right,170px) - 26px);margin:0;max-height:calc(100% - 143px);overflow:auto;scrollbar-width:thin;scrollbar-color:#b2b57c66 transparent}
+.immersive-battle .battle-live-sidebar:has(>.battle-ranking)>.battle-events{display:none}
+.immersive-battle .battle-events ol{gap:9px;margin-top:10px}
+.immersive-battle .battle-events li{font-size:8px;line-height:1.7;display:block;color:#aebc98}
+.immersive-battle .battle-events li>i{display:inline-block;font-size:7px;margin:0 5px 0 0;padding:1px 3px;color:#b7c59b;background:#455a37a3}
+.immersive-battle .battle-events li[data-side=enemy]>i{color:#dcc89d;background:#64533c92}
+.immersive-battle .battle-events li[data-kind=skill]{color:#dbc68c}
+.immersive-battle .battle-events li[data-kind=defeat]{color:#c6a08b}
+.immersive-battle .battle-ranking ol{display:block;margin:12px 0 8px}
+.immersive-battle .battle-ranking li{gap:6px;margin-top:10px}
+.immersive-battle .battle-ranking-place{font-size:9px;color:#b7a579}
+.immersive-battle .battle-ranking img{width:23px;height:29px}
+.immersive-battle .battle-ranking-name strong{font-size:8px;color:#c2cda7}
+.immersive-battle .battle-ranking-name>span{height:3px;background:#3a5030;margin-top:5px}
+.immersive-battle .battle-ranking li>b{font-size:9px;color:#d0bd83;min-width:21px}
+.immersive-battle .battle-ranking>p{font-size:7px;color:#91a37d}
+.immersive-battle .battle-round-result,.immersive-battle .battle-outcome{position:absolute;left:50%;top:42%;transform:translate(-50%,-50%);z-index:30;display:flex;align-items:center;justify-content:center;gap:12px;width:300px;max-width:90%;padding:15px 19px;border-block:1px solid #d6bd777d;border-inline:0;background:linear-gradient(90deg,#102d20ba,#142f22f5,#102d20ba);color:#e1ca83;pointer-events:none}
+.immersive-battle .battle-round-result strong,.immersive-battle .battle-outcome h2{font:500 24px var(--serif,serif);color:#eddaa1}
+.immersive-battle .battle-round-result span,.immersive-battle .battle-outcome p{font-size:9px;line-height:1.8;color:#c3c8a5}
+.immersive-battle .battle-round-result.is-lost strong{color:#d6c0a6}
+.immersive-battle .battle-abandon{display:none}
+/* Enlarged artwork / actual stats: hover does not change selection or placement. */
+.arena-card-peek{position:fixed;z-index:400;width:228px;max-height:380px;overflow:hidden;border:1px solid #d7bd77;border-radius:5px;box-shadow:0 9px 35px #03130ed9;background:#112820f7;color:#dce1bd;pointer-events:none;animation:arena-peek-in .12s ease-out both}
+.arena-card-peek>img{display:block;width:100%;height:160px;object-fit:cover;object-position:center 35%;border-bottom:1px solid #cdb4786e}
+.arena-card-peek>div{padding:12px 13px}
+.arena-card-peek h3{font:500 20px var(--serif,serif);color:#ede1b7;line-height:1.3;margin:0}
+.arena-card-peek h3+span{display:block;font-size:9px;margin-top:6px;color:#b3c39a}
+.arena-card-peek dl{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin:12px 0}
+.arena-card-peek dt{font-size:8px;color:#94a97c;line-height:1.5}
+.arena-card-peek dd{font-size:15px;color:#e0d4a4;margin:3px 0 0}
+.arena-card-peek p{font-size:9px;line-height:1.75;color:#b4c19e;margin:0}
+.arena-card-peek p>b{display:block;color:#d9c181;font-size:10px;margin-bottom:3px}
+@keyframes arena-peek-in{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
+/* Smaller desktops keep the board and both docks within a single viewport. */
+@media(max-height:820px) and (min-width:761px){.immersive-battle{--deploy-cell-height:65px;--deploy-card-width:44px;--battle-live-height:clamp(290px,calc(100dvh - var(--arena-top,64px) - var(--arena-dock-height,146px) - 80px),480px)}.immersive-battle .battle-builder-layout{bottom:90px}.immersive-battle .battle-roster-toolbar{bottom:70px}.immersive-battle .battle-roster{height:64px;max-height:64px;bottom:2px}.immersive-battle .battle-bench-card,.immersive-battle .battle-bench-card>.battle-pick,.immersive-battle .battle-pick-art{height:55px;min-height:55px}.immersive-battle .battle-board-top{padding-bottom:4px;min-height:31px}.immersive-battle .battle-deploy-labels{padding-top:1px;padding-bottom:4px;font-size:9px}.immersive-battle .battle-deploy-labels.bottom{padding-top:4px;padding-bottom:1px}.immersive-battle .battle-deploy-actions{min-height:36px;padding-top:4px}.immersive-battle .battle-primary{min-height:31px;font-size:10px!important}.immersive-battle .battle-slot-caption>strong{font-size:8px}.immersive-battle .battle-slot-level{bottom:18px;font-size:7px}.immersive-battle .battle-synergies.compact .battle-synergy{padding-block:4px}.immersive-battle .battle-synergy-explain{font-size:7px!important}.immersive-battle .battle-builder-inspector{gap:7px}}
+@media(max-width:1050px){.immersive-battle{--arena-left:158px;--arena-right:150px}.immersive-battle .battle-builder-inspector,.immersive-battle .battle-live-sidebar>.battle-synergies{left:9px;width:calc(var(--arena-left) - 18px)}.immersive-battle .battle-synergies,.immersive-battle .battle-card-detail,.immersive-battle .battle-inspect-hint{padding-inline:8px}.immersive-battle .battle-live-sidebar>.battle-events,.immersive-battle .battle-live-sidebar>.battle-ranking{right:9px;width:calc(var(--arena-right) - 18px)}.immersive-battle .battle-synergy-explain{font-size:7px!important}.immersive-battle .battle-board-top,.immersive-battle .battle-deploy-labels{padding-inline:5px}.immersive-battle .battle-deploy-board{padding-inline:3px;gap:4px}.immersive-battle .battle-bench-card{flex-basis:108px;width:108px}.combat-battle-tools{right:10px;gap:5px}.combat-battle-tools .account-toggle{max-width:116px;font-size:9px}}
+@media(max-width:760px){.combat-battle-tools{right:8px;top:9px;height:28px;gap:4px}.combat-battle-tools>button{width:28px;height:28px}.combat-battle-tools .account-toggle{height:28px;min-height:28px;max-width:108px;font-size:8px;padding:5px 8px}.combat-battle-help{display:none!important}.immersive-battle{--arena-left:10px;--arena-right:10px;--deploy-cell-height:64px;--deploy-card-width:43px;--battle-live-height:clamp(290px,calc(100dvh - var(--arena-top,56px) - var(--arena-dock-height,170px) - 95px),460px)}.immersive-battle .battle-builder-layout{bottom:100px}.immersive-battle .battle-deployment{justify-content:center;left:10px;right:10px;padding-top:20px}.immersive-battle .battle-board-top{padding-inline:6px}.immersive-battle .battle-deploy-board{gap:4px;padding-inline:3px}.immersive-battle .battle-deploy-labels{padding-inline:5px;font-size:9px}.immersive-battle .battle-deploy-labels>small{display:none}.immersive-battle .battle-deploy-actions{padding-inline:5px}.immersive-battle .battle-builder-inspector{display:none!important;left:8px;top:44px;bottom:8px;width:173px;z-index:80;overflow:auto}.immersive-battle .battle-builder-inspector.is-open{display:flex!important}.immersive-battle .battle-inspector-toggle{position:absolute;left:8px;top:7px;z-index:70;display:flex!important;align-items:center;justify-content:center;gap:4px;font-size:9px;padding:6px 8px;min-height:27px;background:#102c22e8;border:1px solid #ad9b5c87;border-radius:3px;color:#e0d1a2}.immersive-battle .battle-roster-toolbar{left:10px;right:10px;bottom:79px}.immersive-battle .battle-roster-toolbar>label{width:133px}.immersive-battle .battle-roster{left:8px;right:8px;bottom:5px}.immersive-battle .battle-live-layout>div:first-child{left:10px;right:10px;padding-top:25px}.immersive-battle .battle-live-sidebar>.battle-synergies,.immersive-battle .battle-live-sidebar>.battle-events,.immersive-battle .battle-live-sidebar>.battle-ranking{display:none!important}.immersive-battle .battle-field{padding-inline:0}.immersive-battle .battle-playback{margin-top:8px}.immersive-battle .battle-playback-controls{gap:5px}.immersive-battle .battle-playback-caption{font-size:8px}.immersive-battle .battle-round-result{width:250px}.immersive-battle .battle-round-result strong{font-size:20px}.immersive-battle .battle-round-result span{font-size:8px}}
+@media(max-width:520px){.immersive-battle{--deploy-cell-height:59px;--deploy-card-width:39px;--battle-live-height:clamp(270px,calc(100dvh - var(--arena-top,56px) - var(--arena-dock-height,176px) - 114px),420px)}.immersive-battle .battle-deploy-cell{height:59px!important}.immersive-battle .battle-slot-caption>strong{font-size:7px}.immersive-battle .battle-slot-level{bottom:17px;font-size:7px}.immersive-battle .battle-slot-remove{width:16px;height:16px;top:-4px}.immersive-battle .battle-board-top>span{font-size:9px}.immersive-battle .battle-board-top>button{font-size:9px;padding:4px 7px}.immersive-battle .battle-deploy-labels{font-size:8px}.immersive-battle .battle-primary{font-size:10px!important;min-height:32px;padding:6px 12px}.immersive-battle .battle-deploy-actions{padding-top:4px;min-height:36px}.immersive-battle .battle-deploy-actions>span{font-size:9px}.immersive-battle .battle-deploy-actions b{font-size:17px}.immersive-battle .battle-roster-toolbar h2{font-size:9px}.immersive-battle .battle-roster-toolbar>label{width:120px}.immersive-battle .battle-bench-card{flex-basis:107px;width:107px}.immersive-battle .battle-live-info>strong{font-size:6px;line-height:1}.immersive-battle .battle-live-rank{font-size:6px;right:2px;top:2px}.immersive-battle .battle-hp-label{font-size:6px;margin-top:2px}.immersive-battle .battle-hp-label>b{font-size:5px}.immersive-battle .battle-health{height:2px}.immersive-battle .battle-energy{height:2px;margin-top:1px}.immersive-battle .battle-impact>b{font-size:15px}.immersive-battle .battle-side-label{font-size:9px}.immersive-battle .battle-side-label>small{font-size:8px}.immersive-battle .battle-playback-controls .battle-control span{display:none}.immersive-battle .battle-playback-controls button{font-size:8px;padding:4px 5px}.immersive-battle .battle-skill-banner{min-width:140px;padding:6px 10px}.immersive-battle .battle-skill-banner b{font-size:14px}.combat-battle-tools .account-toggle{max-width:92px}.combat-app.is-battle-immersive>.toast{bottom:180px;max-width:calc(100vw - 20px);font-size:10px}}
+@media(max-height:580px) and (orientation:landscape){.immersive-battle{--arena-left:120px;--arena-right:120px;--deploy-cell-height:35px;--deploy-card-width:24px;--battle-live-height:clamp(145px,calc(100dvh - var(--arena-top,48px) - var(--arena-dock-height,116px) - 58px),285px)}.immersive-battle .battle-builder-layout{bottom:58px}.immersive-battle .battle-deployment{padding-top:0}.immersive-battle .battle-board-top{min-height:23px;padding-block:0}.immersive-battle .battle-board-top>span{font-size:8px}.immersive-battle .battle-board-top>button{font-size:8px;padding:2px 6px;min-height:22px}.immersive-battle .battle-deploy-labels{padding:2px 4px;font-size:7px}.immersive-battle .battle-deploy-labels>small{display:none}.immersive-battle .battle-deploy-board{gap:3px}.immersive-battle .battle-deploy-cell{height:var(--deploy-cell-height)!important}.immersive-battle .battle-slot-caption>strong{font-size:5px}.immersive-battle .battle-slot-level{font-size:5px;bottom:11px;padding:0 2px}.immersive-battle .battle-slot-remove{width:13px;height:13px;right:calc(50% - var(--deploy-card-width)/2 - 2px);top:-3px}.immersive-battle .battle-slot-remove svg{width:8px;height:8px}.immersive-battle .battle-slot.empty .battle-slot-main>span:last-child{display:none}.immersive-battle .battle-slot.empty .battle-slot-main>svg{width:11px;height:11px}.immersive-battle .battle-slot-number{font-size:6px}.immersive-battle .battle-deploy-actions{min-height:26px;padding-top:2px}.immersive-battle .battle-deploy-actions>span{font-size:8px}.immersive-battle .battle-deploy-actions b{font-size:13px}.immersive-battle .battle-primary{min-height:24px;padding:3px 9px;font-size:8px!important;gap:5px}.immersive-battle .battle-primary>svg{width:10px;height:10px}.immersive-battle .battle-roster-toolbar{bottom:47px;height:16px}.immersive-battle .battle-roster-toolbar h2{font-size:8px}.immersive-battle .battle-roster-toolbar>label{height:17px;width:110px;padding:2px 5px}.immersive-battle .battle-roster{height:45px;max-height:45px;bottom:0;gap:6px;padding-top:2px}.immersive-battle .battle-bench-card,.immersive-battle .battle-bench-card>.battle-pick,.immersive-battle .battle-pick-art{height:39px;min-height:39px}.immersive-battle .battle-bench-card{flex-basis:95px;width:95px}.immersive-battle .battle-bench-card>.battle-pick{grid-template-columns:29px minmax(0,1fr)}.immersive-battle .battle-pick-art{width:29px}.immersive-battle .battle-pick-copy{padding:3px 5px 13px}.immersive-battle .battle-pick-copy>strong{font-size:8px}.immersive-battle .battle-pick-copy>span{font-size:7px;margin-top:1px}.immersive-battle .battle-pick-stars{font-size:6px}.immersive-battle .battle-sell-unit{min-height:12px;padding:0 4px;font-size:7px!important;bottom:2px}.immersive-battle .battle-builder-inspector{width:106px;left:6px;top:0;bottom:0;gap:5px}.immersive-battle .battle-synergies{padding:7px}.immersive-battle .battle-card-detail,.immersive-battle .battle-inspect-hint,.immersive-battle .battle-synergies>p{display:none}.immersive-battle .battle-synergies.compact .battle-synergy-list{grid-template-columns:1fr;gap:1px}.immersive-battle .battle-synergies.compact .battle-synergy{grid-template-columns:16px 1fr auto;gap:3px;padding-block:2px}.immersive-battle .battle-synergies.compact .battle-synergy-count{grid-row:auto;min-width:16px;height:16px;font-size:7px}.immersive-battle .battle-synergies.compact .battle-synergy b{font-size:7px}.immersive-battle .battle-synergies.compact .battle-synergy>em{grid-column:auto;font-size:6px}.immersive-battle .battle-panel-heading h2{font-size:9px}.immersive-battle .battle-panel-heading>span{display:none}.immersive-battle .battle-live-layout>div:first-child{padding-top:0}.immersive-battle .battle-live-sidebar>.battle-synergies{width:106px;left:6px;top:0}.immersive-battle .battle-live-sidebar>.battle-events{display:none!important}.immersive-battle .battle-side-label{font-size:8px;margin-top:0;margin-bottom:3px}.immersive-battle .battle-side-label>small{font-size:7px}.immersive-battle .battle-side-label.own{margin-top:3px}.immersive-battle .battle-board-grid{gap:2px}.immersive-battle .battle-live-info>strong,.immersive-battle .battle-hp-label,.immersive-battle .battle-live-rank{display:none}.immersive-battle .battle-live-info{bottom:2px;left:1px;right:1px}.immersive-battle .battle-health,.immersive-battle .battle-energy{height:2px;margin-top:1px}.immersive-battle .battle-playback{min-height:25px;margin-top:4px}.immersive-battle .battle-playback-controls{min-height:24px;padding:2px 5px}.immersive-battle .battle-playback-controls button{min-height:20px;font-size:7px;padding:2px 4px}.immersive-battle .battle-playback-caption{font-size:7px}.immersive-battle .battle-playback-controls .battle-speed{min-width:23px}.immersive-battle .battle-impact>b{font-size:12px}.immersive-battle .battle-skill-banner{min-width:130px;padding:4px 8px}.immersive-battle .battle-skill-banner b{font-size:12px}.immersive-battle .battle-skill-banner>span{font-size:7px}}
+@media(hover:none){.arena-card-peek{display:none}}
+@media(prefers-reduced-motion:reduce){.arena-card-peek{animation:none}.immersive-battle *{scroll-behavior:auto}}
+
+/* Shared battlefield geometry: planning occupies only the lower four of eight rows. */
+.match-arena.immersive-battle{--arena-board-height:clamp(176px,calc(100dvh - var(--arena-top) - var(--arena-dock-height) - 164px),520px);--battle-live-height:var(--arena-board-height);--deploy-cell-height:calc(var(--arena-board-height) / 8);--deploy-card-width:calc(var(--arena-board-height) / 8 * .66);--battle-live-card-width:var(--deploy-card-width)}
+.immersive-battle .battle-arena.embedded .battle-builder-layout{bottom:90px}
+.immersive-battle .battle-arena.embedded .battle-deployment{justify-content:flex-start;padding:0}
+.immersive-battle .battle-arena.embedded .battle-board-top{height:24px;min-height:24px;flex:0 0 24px;padding:0 3px;margin:0}
+.immersive-battle .battle-arena.embedded .battle-board-top>button{height:23px;min-height:23px;padding:2px 8px}
+.immersive-battle .battle-arena.embedded .battle-deploy-field{display:block;position:relative;width:min(100%,660px);max-width:660px;height:var(--arena-board-height);flex:0 0 var(--arena-board-height)}
+.immersive-battle .battle-arena.embedded .battle-deploy-ghost-grid{position:absolute;inset:0 0 50%;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));grid-template-rows:repeat(4,minmax(0,1fr));opacity:.4;pointer-events:none}
+.immersive-battle .battle-arena.embedded .battle-deploy-ghost-grid>span{margin:2px;border:1px solid #c7bb8542;border-radius:3px;background:transparent}
+.immersive-battle .battle-arena.embedded .battle-deploy-field>.battle-deploy-labels{position:absolute;top:50%;left:3px;right:3px;transform:translateY(-100%);width:auto;height:19px;min-height:0;padding:0 1px 3px;align-items:flex-end;z-index:3;pointer-events:none}
+.immersive-battle .battle-arena.embedded .battle-deploy-board{position:absolute;inset:50% 0 0;display:grid;grid-template-columns:repeat(7,minmax(0,1fr));grid-template-rows:repeat(4,minmax(0,1fr));gap:0;width:100%;max-width:none;padding:0;margin:0;border-top:1px solid #e2cd7f66}
+.immersive-battle .battle-arena.embedded .battle-deploy-cell{height:var(--deploy-cell-height)!important;aspect-ratio:auto;border:0;border-radius:0;background:none;box-shadow:none}
+.immersive-battle .battle-arena.embedded .battle-deploy-cell:before{content:'';position:absolute;inset:2px;pointer-events:none;border:1px solid #dbcb8c61;border-radius:3px;background:#e0d39608}
+.immersive-battle .battle-arena.embedded .battle-deploy-cell.in-range{outline:0;box-shadow:none}
+.immersive-battle .battle-arena.embedded .battle-deploy-cell.in-range:before{border-color:#edcf79;background:#e6c57329;box-shadow:inset 0 0 10px #ffdc7422}
+.immersive-battle .battle-arena.embedded .battle-slot{max-width:none;margin:0}
+.immersive-battle .battle-arena.embedded .battle-slot.filled .battle-slot-main{top:2px;width:var(--deploy-card-width);height:calc(var(--deploy-cell-height) - 4px)}
+.immersive-battle .battle-arena.embedded .battle-slot-caption{left:1px;right:1px;bottom:4px}
+.immersive-battle .battle-arena.embedded .battle-slot-caption>strong{font-size:9px;line-height:1.15;color:#fff0c9;text-shadow:0 1px 3px #000}
+.immersive-battle .battle-arena.embedded .battle-slot-level{bottom:25px;font-size:8px}
+.immersive-battle .battle-arena.embedded .battle-slot-remove{top:0}
+.immersive-battle .battle-arena.embedded .battle-deploy-labels.bottom{height:16px;flex:0 0 16px;padding:2px 3px 0;margin:0;align-items:center}
+.immersive-battle .battle-arena.embedded .battle-deploy-actions{min-height:32px;height:32px;flex:0 0 32px;padding:2px 3px 0;margin:0}
+.immersive-battle .battle-arena.embedded .battle-deploy-actions .battle-primary{min-height:29px;height:29px;padding:3px 12px}
+.immersive-battle .battle-arena.embedded .battle-roster-toolbar{bottom:70px;height:20px;margin:0}
+.immersive-battle .battle-arena.embedded .battle-roster{bottom:2px;height:64px;max-height:64px}
+.immersive-battle .battle-arena.embedded .battle-field{width:min(100%,660px);max-width:660px;padding:0;margin:0}
+.immersive-battle .battle-arena.embedded .battle-side-label{height:24px;margin:0;padding:0 3px;align-items:center}
+.immersive-battle .battle-arena.embedded .battle-side-label.own{height:16px;margin:0;padding:2px 3px 0}
+.immersive-battle .battle-arena.embedded .battle-tactics-board{height:var(--arena-board-height)!important}
+.immersive-battle .battle-arena.embedded .battle-live-layout>div:first-child{padding-top:0}
+.immersive-battle .battle-arena.embedded .battle-live-sidebar>.battle-events,.immersive-battle .battle-arena.embedded .battle-live-sidebar>.battle-ranking{top:140px;max-height:calc(100% - 153px)}
+.immersive-battle .battle-arena.embedded .battle-live-unit.is-acting{z-index:20}
+.immersive-battle .battle-arena.embedded .battle-synergies.compact .battle-synergy b{font-size:10px;color:#e4e8ca}
+.immersive-battle .battle-arena.embedded .battle-synergies.compact .battle-synergy>em{font-size:8px;color:#bdc6a5}
+.immersive-battle .battle-arena.embedded .battle-synergies.compact .battle-synergy.active b{color:#ffdfa0}
+.immersive-battle .battle-arena.embedded .battle-pick-copy>strong{color:#f0e6c7}
+@media(max-width:760px){.immersive-battle .battle-arena.embedded .battle-board-top{padding-left:145px}.immersive-battle .battle-arena.embedded .battle-board-top>span{display:none}.immersive-battle .battle-arena.embedded .battle-board-top>button{margin-left:auto}.immersive-battle .battle-arena.embedded .battle-deploy-field>.battle-deploy-labels{font-size:9px}.immersive-battle .battle-arena.embedded .battle-slot-caption>strong{font-size:8px}.immersive-battle .battle-arena.embedded .battle-slot-level{bottom:22px;font-size:7px}}
+@media(max-height:580px) and (orientation:landscape){
+.match-arena.immersive-battle{--arena-board-height:clamp(96px,calc(100dvh - var(--arena-top) - var(--arena-dock-height) - 106px),285px);--deploy-card-width:26px;--battle-live-card-width:26px}
+.immersive-battle .battle-arena.embedded .battle-builder-layout{bottom:50px}
+.immersive-battle .battle-arena.embedded .battle-board-top{height:20px;min-height:20px;flex-basis:20px}
+.immersive-battle .battle-arena.embedded .battle-deploy-labels.bottom{height:10px;flex-basis:10px;font-size:7px}
+.immersive-battle .battle-arena.embedded .battle-deploy-actions{min-height:25px;height:25px;flex-basis:25px;padding-top:0}
+.immersive-battle .battle-arena.embedded .battle-deploy-actions .battle-primary{height:23px;min-height:23px;padding:2px 8px}
+.immersive-battle .battle-arena.embedded .battle-slot.filled .battle-slot-main{height:36px;top:calc(var(--deploy-cell-height) / 2 - 18px);overflow:hidden}
+.immersive-battle .battle-arena.embedded .battle-slot.filled{z-index:5}
+.immersive-battle .battle-arena.embedded .battle-slot.selected{z-index:15}
+.immersive-battle .battle-arena.embedded .battle-slot-caption>strong{font-size:6px}
+.immersive-battle .battle-arena.embedded .battle-slot-level{bottom:17px;font-size:5px}
+.immersive-battle .battle-arena.embedded .battle-slot-remove{top:calc(var(--deploy-cell-height) / 2 - 20px)}
+.immersive-battle .battle-arena.embedded .battle-deploy-field>.battle-deploy-labels{font-size:7px;height:11px;padding-bottom:1px}
+.immersive-battle .battle-arena.embedded .battle-roster-toolbar{bottom:42px;height:16px}
+.immersive-battle .battle-arena.embedded .battle-roster{bottom:0;height:43px;max-height:43px;padding-block:1px}
+.immersive-battle .battle-arena.embedded .battle-bench-card,.immersive-battle .battle-arena.embedded .battle-bench-card>.battle-pick,.immersive-battle .battle-arena.embedded .battle-pick-art{height:39px;min-height:39px}
+.immersive-battle .battle-arena.embedded .battle-live-unit{width:26px;height:36px;margin-top:calc(var(--arena-board-height) / 16 - 18px);margin-left:calc(100% / 14 - 13px)}
+.immersive-battle .battle-arena.embedded .battle-side-label{height:20px}
+.immersive-battle .battle-arena.embedded .battle-side-label.own{height:10px}
+.immersive-battle .battle-arena.embedded .battle-synergies.compact .battle-synergy b{font-size:8px}
+.immersive-battle .battle-arena.embedded .battle-synergies.compact .battle-synergy>em{font-size:7px}
+}

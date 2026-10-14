@@ -122,7 +122,7 @@ export function preview(run:Run,keys:string[]):Preview {
   const lines:ScoreLine[]=[];let combo:string|null=null;
   const a=defs.map(d=>d.affinity);const kinds=new Set(a).size;
   if(a.length===3) {if(kinds===1)combo='mono';else if(kinds===3)combo='trio';else if(a[0]===a[2])combo='mirror';}
-  if(defs.length)lines.push({label:'星灵基础共鸣',value:projections.reduce((sum,c)=>sum+CARD_MAP[c.defId].base+(c.rank-1)*2+(run.talents.includes('growth')?3:0),0)});
+  if(defs.length)lines.push({label:'基础分',value:projections.reduce((sum,c)=>sum+CARD_MAP[c.defId].base+(c.rank-1)*2+(run.talents.includes('growth')?3:0),0)});
   if(combo)lines.push({label:COMBOS.find(c=>c.id===combo)!.name,value:COMBOS.find(c=>c.id===combo)!.bonus});
   defs.forEach((d,i)=>{
     let value=0;
@@ -138,6 +138,10 @@ export function preview(run:Run,keys:string[]):Preview {
     if(d.trait==='memory'&&combo&&run.logs.at(-1)?.combo===combo)value=9;
     if(d.trait==='rush'&&cost===budget)value=12;
     if(d.trait==='wander'&&combo==='trio'&&i===1)value=14;
+    if(d.trait==='center'&&i===1)value=8;
+    if(d.trait==='contrast'&&i>0&&a[i-1]!==d.affinity)value=7;
+    if(d.trait==='solo'&&defs.length===1)value=16;
+    if(d.trait==='shift'&&combo&&run.logs.at(-1)?.combo&&run.logs.at(-1)!.combo!==combo)value=11;
     if(value)lines.push({label:d.traitName,value});
   });
   const condition=CONDITIONS.find(c=>c.id===run.conditions[run.turn-1])!;
@@ -147,11 +151,11 @@ export function preview(run:Run,keys:string[]):Preview {
   if(condition.id==='trio'&&combo==='trio')bonus=10;
   if(condition.id==='mirror'&&combo==='mirror')bonus=12;
   if(bonus&&defs.length)lines.push({label:condition.name,value:bonus});
-  if(run.talents.includes('harmony')&&combo==='mono')lines.push({label:'纯粹之心',value:18});
-  if(run.talents.includes('echo')&&combo==='mirror')lines.push({label:'回声之环',value:16});
-  if(run.talents.includes('focus')&&budget>cost&&defs.length)lines.push({label:'留白之美',value:(budget-cost)*4});
+  if(run.talents.includes('harmony')&&combo==='mono')lines.push({label:TALENTS.find(t=>t.id==='harmony')!.name,value:18});
+  if(run.talents.includes('echo')&&combo==='mirror')lines.push({label:TALENTS.find(t=>t.id==='echo')!.name,value:16});
+  if(run.talents.includes('focus')&&budget>cost&&defs.length)lines.push({label:TALENTS.find(t=>t.id==='focus')!.name,value:(budget-cost)*4});
   const subtotal=lines.reduce((sum,l)=>sum+l.value,0);
-  if(run.talents.includes('prism')&&combo==='trio')lines.push({label:'三色棱镜 ×1.3',value:Math.round(subtotal*.3)});
+  if(run.talents.includes('prism')&&combo==='trio')lines.push({label:TALENTS.find(t=>t.id==='prism')!.name+' ×1.3',value:Math.round(subtotal*.3)});
   const maxAffinity=Math.max(0,...['moon','sun','forest'].map(x=>a.filter(y=>x===y).length));
   return {score:invalid?0:lines.reduce((sum,l)=>sum+l.value,0),cost,budget,combo,lines,growth:{insight:kinds*2+(combo==='trio'?6:0),bond:maxAffinity*2+(combo==='mono'?6:combo==='mirror'?4:0),focus:Math.max(0,budget-cost)+3},valid:!invalid,reason:invalid};
 }

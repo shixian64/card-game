@@ -1,0 +1,228 @@
+/* Combat-first application. Shared illustration, navigation and card treatment
+   live in style.css; this surface contains no legacy training presentation. */
+.combat-app { --combat-green:#25443e; }
+.combat-app .combat-workspace { min-height:calc(100svh - var(--topbar)); }
+.combat-app .collection-shell { grid-template-columns:minmax(0,1fr) 309px; }
+.combat-app .collection-main { min-width:0; }
+.combat-app .inspector { align-self:start;position:sticky;top:19px; }
+.combat-app .portrait-frame { aspect-ratio:.89; }
+.combat-app .portrait-frame>img { object-position:center 44%; }
+.combat-app .inspector-heading { margin-bottom:14px; }
+.combat-app .inspector-title { margin-top:18px; }
+.combat-app .inspector-title h2 { font-size:24px; }
+.combat-app .detail-level strong { font-size:21px; }
+.combat-app .tags { flex-wrap:wrap;gap:6px; }
+.combat-app .tags>span { font-size:10px; }
+.combat-card .card-sub>span { display:inline-flex;align-items:center;gap:4px; }
+.combat-card .card-sub>span:nth-child(2) { color:#efe6ce;letter-spacing:.12em; }
+.combat-card .card-sub>span:first-child svg { color:#b8d0bc;fill:#b8d0bc44; }
+.combat-card .card-sub>span:last-child svg { color:#e7cfa4; }
+.combat-card.locked .rank-badge { font:9px "Microsoft YaHei",sans-serif; }
+.combat-app .collection-controls { margin-top:11px; }
+.combat-app .card-meta { min-height:27px; }
+.combat-attributes { display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:18px 0 0;padding:17px 0;border-block:1px solid #d1c2a877; }
+.combat-attributes>div { display:grid;grid-template-columns:auto 1fr;gap:6px 8px;align-items:center; }
+.combat-attributes>div+div { border-left:1px solid #d6c5a883;padding-left:17px; }
+.combat-attributes svg { color:#7c927c;grid-row:1/3;stroke-width:1.5; }
+.combat-attributes>div+div svg { color:#af8850; }
+.combat-attributes span { font-size:9px;color:#8a7c66; }
+.combat-attributes b { font:26px/1 Georgia,serif;color:#554731; }
+.combat-skill { padding:17px 0 18px; }
+.combat-skill>strong { display:flex;align-items:center;gap:6px;font:15px var(--serif);color:#8b6936;letter-spacing:.035em; }
+.combat-skill>strong svg { color:#b3935e; }
+.combat-skill>p { font-size:11px;line-height:1.85;color:#746957;margin-top:10px; }
+.combat-app .inspector .minor-actions { margin-bottom:11px; }
+.combat-app .inspector>.fineprint { font-size:9px;margin-bottom:12px; }
+.combat-trade-link { margin:6px auto 0;display:flex;font-size:10px;min-height:35px; }
+.combat-collection-footer { display:flex;align-items:center;justify-content:space-between;gap:15px;padding:17px 0 0;margin-top:16px;border-top:1px solid #ccb68c77; }
+.combat-collection-footer>span { display:inline-flex;align-items:center;gap:7px;font-size:10px;color:#958267; }
+.combat-collection-footer>span>svg { color:#aa956f; }
+.combat-collection-footer>span>b { color:#926e36;font:13px Georgia,serif; }
+.combat-collection-footer>.gold-button { min-height:43px;font-size:14px;padding-inline:21px; }
+.combat-profile { cursor:default; }
+.combat-profile b { max-width:106px;overflow:hidden;text-overflow:ellipsis; }
+.combat-confirm-card { display:flex;align-items:center;gap:18px;padding:5px 0 22px;margin-bottom:19px;border-bottom:1px solid #d3bfa07b; }
+.combat-confirm-card>img { width:68px;height:88px;object-fit:cover;border:1px solid #b49b6c;padding:2px;border-radius:3px; }
+.combat-confirm-card>div { display:flex;flex-direction:column;gap:7px; }
+.combat-confirm-card b { display:flex;align-items:center;gap:11px;font:20px var(--serif); }
+.combat-confirm-card span { font-size:11px;color:#938064; }
+.combat-loading { display:flex;align-items:center;justify-content:center;flex-direction:column;gap:17px;min-height:calc(100svh - 130px);color:#b29869;text-align:center; }
+.combat-loading>.crest { width:83px;height:83px;margin-bottom:10px; }
+.combat-loading h2 { font-size:25px;color:#6d5a38;letter-spacing:.07em; }
+.combat-loading p { font-size:12px;color:#9b8b70; }
+.combat-loading>.gold-button { margin-top:8px; }
+.combat-spin { animation:combat-spin 1s linear infinite; }
+.combat-connection-error { display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:12px 14px;border:1px solid #c6976573;border-left:3px solid #b67c44;background:#f4e6cb88;color:#94683c;margin-bottom:18px;font-size:11px;line-height:1.7; }
+.combat-connection-error>span { flex:1;min-width:150px; }
+.combat-connection-error>button { display:flex;align-items:center;gap:5px;background:none;color:#846338;font-size:11px;padding:5px 2px; }
+.combat-login { display:grid;grid-template-columns:minmax(290px,1fr) minmax(320px,1fr);gap:68px;min-height:calc(100svh - 102px);align-items:center;max-width:1160px;margin:0 auto; }
+.combat-login-art { position:relative;align-self:stretch;min-height:560px;border:1px solid #b69b6a;overflow:hidden;border-radius:100px 5px 5px 5px;box-shadow:0 8px 22px #1b2b4024; }
+.combat-login-art>img { height:100%;width:100%;object-fit:cover;position:absolute;inset:0; }
+.combat-login-art:after { content:"";position:absolute;inset:12px;border:1px solid #e1cd9a80;border-radius:88px 2px 2px 2px;pointer-events:none; }
+.combat-login-copy { padding:30px 10px 30px 0; }
+.combat-login-copy .eyebrow { font-size:10px; }
+.combat-login-copy h1 { font-size:41px;line-height:1.55;margin:21px 0 23px;letter-spacing:.05em; }
+.combat-login-copy>p { font-size:13px;line-height:2;color:#7d755f;margin-bottom:30px; }
+.combat-login-copy>.account-menu { display:inline-block; }
+.combat-login-copy>.account-menu .account-toggle { max-width:250px;min-width:164px;padding:14px 25px;font:16px var(--serif);letter-spacing:.08em;border:1px solid #a88c59;background:linear-gradient(110deg,#ead4a4,#f4e5bf 45%,#dbc18c);color:#5e4727;border-radius:5px;box-shadow:inset 0 0 0 3px #fff3d480; }
+.combat-login-copy>.account-menu .account-popover { left:0;right:auto;top:57px; }
+.combat-login-note { display:flex;align-items:center;gap:7px;font-size:10px;color:#a58e64;margin-top:24px; }
+.combat-login-copy>small { display:block;max-width:350px;margin-top:11px;color:#a6977e;font-size:10px;line-height:1.8; }
+.combat-app .combat-page-battle { max-width:1600px; }
+.combat-app .combat-page-community { max-width:1480px; }
+.combat-app .summon-stage .combat-card { aspect-ratio:.77; }
+.combat-app .summon-result .combat-card { aspect-ratio:.75; }
+.combat-app .summon-result-label { color:#e3cf9f; }
+.combat-app .combat-connection-error+.summon-screen { min-height:calc(100svh - 132px); }
+.combat-app .combat-page-summon>.combat-connection-error { margin:12px 20px; }
+@keyframes combat-spin { to{transform:rotate(360deg)} }
+@media(min-width:1280px) {
+  .combat-app .collection-main .spirit-card { aspect-ratio:.88; }
+  .combat-app .collection-main .card-title { font-size:17px; }
+  .combat-app .collection-meta { min-height:30px; }
+}
+@media(max-width:1270px) {
+  .combat-app .collection-shell { grid-template-columns:minmax(0,1fr) 272px;gap:22px; }
+  .combat-app .inspector-title h2 { font-size:21px; }
+  .combat-app .detail-level strong { font-size:19px; }
+  .combat-attributes { gap:11px;padding-block:14px; }
+  .combat-attributes>div+div { padding-left:11px; }
+  .combat-attributes b { font-size:23px; }
+  .combat-skill>strong { font-size:14px; }
+  .combat-skill>p { font-size:10px; }
+  .combat-login { gap:37px; }
+  .combat-login-copy h1 { font-size:36px; }
+  .combat-login-art { min-height:570px; }
+  .combat-app .currencies { gap:20px; }
+}
+@media(max-width:1100px) {
+  .combat-app .collection-shell { grid-template-columns:minmax(0,1fr) 243px;gap:18px; }
+  .combat-app .currencies { gap:15px; }
+  .combat-app .currencies .sound-toggle span { display:none; }
+  .combat-collection-footer { align-items:flex-start; }
+  .combat-collection-footer>span { font-size:9px;gap:5px; }
+  .combat-collection-footer>.gold-button { font-size:12px;padding-inline:15px; }
+  .combat-login { grid-template-columns:minmax(230px,.9fr) minmax(270px,1fr);gap:28px; }
+  .combat-login-copy h1 { font-size:31px; }
+  .combat-login-copy>p { font-size:12px; }
+}
+@media(max-width:900px) {
+  .combat-app .collection-shell { grid-template-columns:minmax(0,1fr) 250px;gap:20px; }
+  .combat-app .currencies { gap:15px; }
+  .combat-app .currencies>button { min-width:69px; }
+  .combat-app .currencies .sound-toggle { min-width:25px; }
+  .combat-app .currencies .help-button { min-width:23px; }
+  .combat-login { min-height:calc(100svh - 105px); }
+}
+@media(max-width:720px) {
+  .combat-app .collection-shell { grid-template-columns:minmax(0,1fr);gap:28px; }
+  .combat-app .inspector { position:relative;top:auto;display:block;max-width:none;padding:22px; }
+  .combat-app .portrait-frame { aspect-ratio:1.2;max-height:390px; }
+  .combat-app .portrait-frame img { object-position:center 45%; }
+  .combat-app .inspector-title h2 { font-size:27px; }
+  .combat-app .detail-level strong { font-size:25px; }
+  .combat-app .tags>span { font-size:11px; }
+  .combat-attributes { padding-block:18px;margin-top:19px;gap:25px; }
+  .combat-attributes>div+div { padding-left:24px; }
+  .combat-attributes span { font-size:10px; }
+  .combat-attributes b { font-size:28px; }
+  .combat-skill { padding-block:20px; }
+  .combat-skill>strong { font-size:17px; }
+  .combat-skill>p { font-size:12px;line-height:1.9; }
+  .combat-trade-link { font-size:11px;min-height:37px; }
+  .combat-app .currencies { gap:12px; }
+  .combat-app .currencies>button { min-width:61px; }
+  .combat-app .currencies>button:nth-child(3) { min-width:44px; }
+  .combat-app .currencies .sound-toggle { min-width:23px; }
+  .combat-app .currencies .help-button { display:none; }
+  .combat-app .topbar .account-menu .account-toggle { max-width:95px; }
+  .combat-login { display:flex;flex-direction:column;gap:25px;min-height:0; }
+  .combat-login-art { width:100%;height:350px;min-height:0;border-radius:70px 5px 5px 5px; }
+  .combat-login-art img { object-position:center 48%; }
+  .combat-login-art:after { border-radius:58px 2px 2px 2px; }
+  .combat-login-copy { width:100%;padding:0 7px 20px; }
+  .combat-login-copy h1 { font-size:34px;margin:17px 0 20px;line-height:1.45; }
+  .combat-login-copy>p { font-size:12px;margin-bottom:23px; }
+  .combat-login-copy>.account-menu .account-popover { left:16px;right:16px;top:68px;position:fixed;max-width:calc(100vw - 32px);width:auto; }
+  .combat-app .combat-page-battle { padding-inline:17px; }
+}
+@media(max-width:520px) {
+  .combat-app .topbar { padding-inline:11px;gap:6px; }
+  .combat-app .breadcrumb { gap:5px; }
+  .combat-app .breadcrumb strong { font-size:10px; }
+  .combat-app .currencies { gap:8px; }
+  .combat-app .currencies>button { min-width:51px;gap:4px;padding-right:5px; }
+  .combat-app .currencies>button:nth-child(3) { min-width:32px; }
+  .combat-app .currencies .sound-toggle { min-width:19px;width:19px;padding:0; }
+  .combat-app .currencies .sound-toggle>svg:first-child { width:16px;height:16px; }
+  .combat-app .topbar .account-menu .account-toggle { max-width:52px;padding:6px 8px;font-size:10px; }
+  .combat-app .collection-controls { gap:5px; }
+  .combat-app .collection-controls .rarity-filter { gap:0; }
+  .combat-app .rarity-filter button { font-size:9px;padding:6px; }
+  .combat-app .sort-control { font-size:9px;gap:3px; }
+  .combat-app .sort-control select { max-width:79px;min-height:29px;font-size:9px; }
+  .combat-app .section-heading h1 { font-size:33px; }
+  .combat-app .collection-count { font-size:10px; }
+  .combat-app .collection-count b { font-size:18px; }
+  .combat-app .card-sub>span { gap:3px; }
+  .combat-app .card-sub>span:nth-child(2) { letter-spacing:.03em; }
+  .combat-collection-footer { align-items:center;gap:10px;flex-wrap:wrap; }
+  .combat-collection-footer>span { font-size:9px; }
+  .combat-collection-footer>.gold-button { font-size:13px;padding:12px 17px;min-height:43px; }
+  .combat-app .inspector { padding:18px; }
+  .combat-app .portrait-frame { aspect-ratio:.91;max-height:360px; }
+  .combat-app .inspector-title h2 { font-size:25px; }
+  .combat-app .detail-level strong { font-size:23px; }
+  .combat-app .tags>span { font-size:10px; }
+  .combat-app .minor-actions .secondary-button { min-height:42px;font-size:13px; }
+  .combat-app .inspector>.dark-button { min-height:45px;font-size:16px; }
+  .combat-app .inspector>.fineprint { font-size:10px; }
+  .combat-attributes { gap:18px; }
+  .combat-attributes>div+div { padding-left:18px; }
+  .combat-attributes b { font-size:27px; }
+  .combat-skill>strong { font-size:16px; }
+  .combat-skill>p { font-size:11px; }
+  .combat-login-art { height:310px;border-radius:55px 5px 5px 5px; }
+  .combat-login-art:after { inset:10px;border-radius:46px 2px 2px 2px; }
+  .combat-login-copy { padding-inline:2px; }
+  .combat-login-copy .eyebrow { font-size:8px; }
+  .combat-login-copy h1 { font-size:31px;line-height:1.5; }
+  .combat-login-copy>p { font-size:12px; }
+  .combat-login-copy>.account-menu .account-toggle { min-width:158px;min-height:47px;font-size:16px; }
+  .combat-login-note { margin-top:21px;font-size:10px; }
+  .combat-login-copy>small { font-size:9px;line-height:1.8; }
+  .combat-app .summon-result .combat-card { aspect-ratio:.61; }
+  .combat-app .summon-result .card-sub>span:nth-child(2) { display:none; }
+  .combat-app .summon-result .card-sub svg { width:8px;height:8px; }
+  .combat-connection-error { font-size:10px;padding:10px;gap:7px; }
+  .combat-connection-error>button { font-size:10px; }
+  .combat-confirm-card { gap:16px; }
+  .combat-confirm-card b { font-size:18px; }
+  .combat-confirm-card span { font-size:10px; }
+  .combat-loading { min-height:calc(100svh - 120px); }
+  .combat-loading h2 { font-size:23px; }
+}
+@media(max-width:370px) {
+  .combat-app .breadcrumb strong { display:none; }
+  .combat-app .currencies { gap:8px; }
+  .combat-app .rarity-filter button { font-size:8px;padding-inline:5px; }
+  .combat-app .sort-control { margin-left:auto; }
+}
+@media(prefers-reduced-motion:reduce) { .combat-spin { animation:none; } }
+
+/* Collection artwork stays label-free; rank is expressed through materials, not corner text. */
+.combat-app .combat-card[data-rank="1"] .card-edge{box-shadow:inset 0 0 0 1px #eee4c63b;}
+.combat-app .combat-card[data-rank="2"]{box-shadow:0 0 0 1px #b8cdd2,0 5px 14px #20393225;}
+.combat-app .combat-card[data-rank="2"] .card-edge{border-color:#d1e5e1a6;box-shadow:inset 0 0 0 1px #e8f5ea72,inset 0 0 14px #c8f0eb22;}
+.combat-app .combat-card[data-rank="3"]{box-shadow:0 0 0 1px #d2b06a,0 0 17px #d4ba6d35,0 7px 17px #36423120;}
+.combat-app .combat-card[data-rank="3"] .card-edge{border-color:#efd592;box-shadow:inset 0 0 0 2px #f9e6ad5c,inset 0 0 25px #f1d48c31;background:linear-gradient(125deg,#fff5b623,transparent 25%,transparent 78%,#ffe9a42b);}
+.combat-app .combat-card[data-rank="3"] .card-edge:after{content:'';position:absolute;inset:3px;background:radial-gradient(circle at 4% 4%,#fff2bd 0 1px,transparent 2px),radial-gradient(circle at 95% 8%,#fff2bd 0 1px,transparent 2px),radial-gradient(circle at 94% 95%,#ffedb0 0 1px,transparent 2px);pointer-events:none;}
+.combat-app .portrait-frame[data-rank="2"]{border-color:#adc9ce;box-shadow:0 0 0 2px #deece359,0 8px 22px #263f3824;}
+.combat-app .portrait-frame[data-rank="3"]{border-color:#e5c581;box-shadow:0 0 0 2px #edd49769,0 0 24px #d7b05c29,0 7px 23px #1e36252e;}
+.combat-app .portrait-frame[data-rank="2"]:after,.combat-app .portrait-frame[data-rank="3"]:after{content:'';position:absolute;inset:5px;pointer-events:none;border:1px solid #e9f8e99c;border-radius:inherit;background:linear-gradient(120deg,#d9eee721,transparent 27%,transparent 77%,#d7efeb1a);}
+.combat-app .portrait-frame[data-rank="3"]:after{border-color:#f4deb2bf;background:linear-gradient(120deg,#fff0af30,transparent 27%,transparent 76%,#ffedb02a),radial-gradient(circle at 3% 4%,#fff4c4 0 1px,transparent 3px),radial-gradient(circle at 97% 95%,#ffeebb 0 1px,transparent 3px);}
+.combat-detail-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;margin:17px 0 20px;padding:13px 0;border-top:1px solid #e4dccb;border-bottom:1px solid #e4dccb;}
+.combat-detail-stats dt{font-size:10px;color:#92907c;white-space:nowrap;line-height:1.5;}
+.combat-detail-stats dd{font-size:17px;color:#59674f;margin:7px 0 0;line-height:1;}
+.combat-app .portrait-frame>img{width:100%;height:100%;object-fit:cover;}
+@media(max-width:520px){.combat-detail-stats{margin:17px 0;gap:12px;}.combat-detail-stats dt{font-size:10px;}.combat-detail-stats dd{font-size:18px;}}

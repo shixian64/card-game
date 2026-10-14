@@ -52,8 +52,8 @@ const traits:[string,string[],number][]=[
 for(const [trait,defs,value] of traits)test('星灵特性：'+trait,()=>{const r=fixture(defs);const d=CARDS.find(c=>c.trait===trait)!;assert.equal(preview(r,keys(r)).lines.find(l=>l.label===d.traitName)?.value,value);});
 test('记忆特性仅在连续组合相同时触发',()=>{
  const r=fixture(['mist-deer','sun-cub','moon-fawn']);const log={turn:1,cards:['moon-fawn'],score:0,combo:'mirror',condition:'forest'};
- const p=preview({...r,logs:[log]},keys(r));assert.equal(p.lines.find(l=>l.label==='昨日回声')?.value,9);
- assert.ok(!preview({...r,logs:[{...log,combo:'mono'}]},keys(r)).lines.some(l=>l.label==='昨日回声'));
+ const p=preview({...r,logs:[log]},keys(r));assert.equal(p.lines.find(l=>l.label===CARD_MAP['mist-deer'].traitName)?.value,9);
+ assert.ok(!preview({...r,logs:[{...log,combo:'mono'}]},keys(r)).lines.some(l=>l.label===CARD_MAP['mist-deer'].traitName));
 });
 test('天赋按规则叠加，三色倍率在所有固定加分之后取整',()=>{
   const r=fixture(['moon-fawn','forest-rabbit','sun-cub']);const plain=preview(r,keys(r));
