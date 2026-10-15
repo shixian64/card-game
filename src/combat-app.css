@@ -214,11 +214,17 @@
 .combat-app .combat-card[data-rank="1"] .card-edge{box-shadow:inset 0 0 0 1px #eee4c63b;}
 .combat-app .combat-card[data-rank="2"]{box-shadow:0 0 0 1px #b8cdd2,0 5px 14px #20393225;}
 .combat-app .combat-card[data-rank="2"] .card-edge{border-color:#d1e5e1a6;box-shadow:inset 0 0 0 1px #e8f5ea72,inset 0 0 14px #c8f0eb22;}
-.combat-app .combat-card[data-rank="3"]{box-shadow:0 0 0 1px #d2b06a,0 0 17px #d4ba6d35,0 7px 17px #36423120;}
-.combat-app .combat-card[data-rank="3"] .card-edge{border-color:#efd592;box-shadow:inset 0 0 0 2px #f9e6ad5c,inset 0 0 25px #f1d48c31;background:linear-gradient(125deg,#fff5b623,transparent 25%,transparent 78%,#ffe9a42b);}
+.combat-app .combat-card[data-rank="3"]{box-shadow:0 0 0 1px #6f93c8,0 0 15px #7fa5d62e,0 7px 17px #36423120;}
+.combat-app .combat-card[data-rank="4"]{box-shadow:0 0 0 1px #a184d6,0 0 19px #a98fdb38,0 7px 17px #36423120;}
+.combat-app .combat-card[data-rank="5"]{box-shadow:0 0 0 1px #d2b06a,0 0 21px #d4ba6d42,0 7px 17px #36423120;}
+.combat-app .combat-card[data-rank="3"] .card-edge{border-color:#9db9e4;box-shadow:inset 0 0 0 2px #b7d0f15c,inset 0 0 25px #9cc3f131;background:linear-gradient(125deg,#cfe4ff23,transparent 25%,transparent 78%,#bcd8ff2b);}
+.combat-app .combat-card[data-rank="4"] .card-edge{border-color:#c9b1ef;box-shadow:inset 0 0 0 2px #d7c4f65c,inset 0 0 25px #bfa0ec31;background:linear-gradient(125deg,#e9dcff23,transparent 25%,transparent 78%,#dcc7ff2b);}
+.combat-app .combat-card[data-rank="5"] .card-edge{border-color:#efd592;box-shadow:inset 0 0 0 2px #f9e6ad5c,inset 0 0 25px #f1d48c31;background:linear-gradient(125deg,#fff5b623,transparent 25%,transparent 78%,#ffe9a42b);}
 .combat-app .combat-card[data-rank="3"] .card-edge:after{content:'';position:absolute;inset:3px;background:radial-gradient(circle at 4% 4%,#fff2bd 0 1px,transparent 2px),radial-gradient(circle at 95% 8%,#fff2bd 0 1px,transparent 2px),radial-gradient(circle at 94% 95%,#ffedb0 0 1px,transparent 2px);pointer-events:none;}
 .combat-app .portrait-frame[data-rank="2"]{border-color:#adc9ce;box-shadow:0 0 0 2px #deece359,0 8px 22px #263f3824;}
-.combat-app .portrait-frame[data-rank="3"]{border-color:#e5c581;box-shadow:0 0 0 2px #edd49769,0 0 24px #d7b05c29,0 7px 23px #1e36252e;}
+.combat-app .portrait-frame[data-rank="3"]{border-color:#7d9fd4;box-shadow:0 0 0 2px #9db9e469,0 0 24px #7fa5d629,0 7px 23px #1e36252e;}
+.combat-app .portrait-frame[data-rank="4"]{border-color:#ac8ed6;box-shadow:0 0 0 2px #c7b2ef69,0 0 26px #a98fdb33,0 7px 23px #1e36252e;}
+.combat-app .portrait-frame[data-rank="5"]{border-color:#e5c581;box-shadow:0 0 0 2px #edd49769,0 0 28px #d7b05c36,0 7px 23px #1e36252e;}
 .combat-app .portrait-frame[data-rank="2"]:after,.combat-app .portrait-frame[data-rank="3"]:after{content:'';position:absolute;inset:5px;pointer-events:none;border:1px solid #e9f8e99c;border-radius:inherit;background:linear-gradient(120deg,#d9eee721,transparent 27%,transparent 77%,#d7efeb1a);}
 .combat-app .portrait-frame[data-rank="3"]:after{border-color:#f4deb2bf;background:linear-gradient(120deg,#fff0af30,transparent 27%,transparent 76%,#ffedb02a),radial-gradient(circle at 3% 4%,#fff4c4 0 1px,transparent 3px),radial-gradient(circle at 97% 95%,#ffeebb 0 1px,transparent 3px);}
 .combat-detail-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:11px;margin:17px 0 20px;padding:13px 0;border-top:1px solid #e4dccb;border-bottom:1px solid #e4dccb;}
@@ -226,3 +232,33 @@
 .combat-detail-stats dd{font-size:17px;color:#59674f;margin:7px 0 0;line-height:1;}
 .combat-app .portrait-frame>img{width:100%;height:100%;object-fit:cover;}
 @media(max-width:520px){.combat-detail-stats{margin:17px 0;gap:12px;}.combat-detail-stats dt{font-size:10px;}.combat-detail-stats dd{font-size:18px;}}
+
+/* 统一品质：抽卡结果徽标与合成结果弹窗 */
+.summon-result{position:relative}
+.summon-result-quality{position:absolute;left:50%;transform:translateX(-50%);bottom:38px;z-index:3;padding:3px 12px;border-radius:999px;font-size:11px;letter-spacing:.14em;color:#f2f6ee;background:#122a24d9;border:1px solid var(--quality-color,#9aa3b2);pointer-events:none}
+.summon-result-quality[data-quality="2"]{--quality-color:#5f9e6e}
+.summon-result-quality[data-quality="3"]{--quality-color:#4d7fc4}
+.summon-result-quality[data-quality="4"]{--quality-color:#8f6bd0}
+.summon-result-quality[data-quality="5"]{--quality-color:#c9a13b;color:#f7ecc9}
+.forge-result .combat-confirm-card{justify-content:center}
+.forge-result[data-branch="fail"] h2{color:#d8a79a}
+
+/* ─── 2026-10 单星币经济：支付策略 / 三选一 / 礼包 / 自用标记 ─── */
+.combat-app .restricted-note{margin-left:2px;color:#c9a558;font-size:10px;font-weight:600;}
+.combat-app .payment-toggle{display:inline-flex;align-items:center;gap:6px;font-size:11px;color:#8a9186;cursor:pointer;white-space:nowrap;}
+.combat-app .payment-toggle input{accent-color:#c9a13b;}
+.combat-app .summon-actions{display:flex;gap:14px;flex-wrap:wrap;justify-content:center;}
+.combat-app .summon-actions .summon-button.ten small{color:#d8c491;}
+.combat-app .choice-note{margin-bottom:14px;}
+.combat-app .starter-picker{max-width:920px;margin:0 auto;padding:18px 0 8px;text-align:center;}
+.combat-app .starter-picker h2{font-size:22px;color:#e8e0c8;letter-spacing:.14em;margin-bottom:6px;}
+.combat-app .starter-grid{margin:18px 0;}
+.combat-app .starter-preview{display:flex;flex-direction:column;gap:7px;margin:0 auto 16px;max-width:560px;padding:12px 16px;border:1px solid rgba(217,197,137,.35);border-radius:12px;background:rgba(12,16,28,.55);text-align:left;}
+.combat-app .starter-preview div{display:flex;flex-direction:column;gap:2px;}
+.combat-app .starter-preview b{color:#e8e0c8;}
+.combat-app .starter-preview span{font-size:13px;color:#b9c2d4;}
+.combat-app .starter-preview p{margin:0;font-size:13px;line-height:1.5;color:#b9c2d4;}
+.combat-app .starter-preview p b{color:#d9c589;}
+.combat-app .tag-free{color:#8fae94;border-color:#8fae9455;}
+.combat-app .tag-restricted{color:#c9a558;border-color:#c9a55855;}
+.combat-app .community-card-rarity{font-size:10px;color:#c9a558;}

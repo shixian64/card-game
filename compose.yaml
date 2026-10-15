@@ -9,12 +9,22 @@ services:
       APP_ORIGIN: https://${DOMAIN:?Set DOMAIN in .env}
       DATABASE_PATH: /app/data/asteria.sqlite
       ALLOW_DEV_LOGIN: "0"
+      TRUSTED_PROXIES: ${CADDY_PROXY_IP:-172.30.0.2}
+      # 旧单人局新建开关与双人调度间隔：显式透传，.env 设 LEGACY_MATCH_STARTS=0 才真正停开。
+      LEGACY_MATCH_STARTS: ${LEGACY_MATCH_STARTS:-1}
+      DUEL_SCHEDULER_TICK_MS: ${DUEL_SCHEDULER_TICK_MS:-1000}
       OPENAI_CLIENT_ID: ${OPENAI_CLIENT_ID:-}
       OPENAI_TOKEN_AUTH_METHOD: ${OPENAI_TOKEN_AUTH_METHOD:-none}
       OPENAI_CLIENT_SECRET: ${OPENAI_CLIENT_SECRET:-}
       ADMIN_OPENAI_SUBJECTS: ${ADMIN_OPENAI_SUBJECTS:-}
+      LINUXDO_CLIENT_ID: ${LINUXDO_CLIENT_ID:-}
+      LINUXDO_CLIENT_SECRET: ${LINUXDO_CLIENT_SECRET:-}
+      LINUXDO_TOKEN_AUTH_METHOD: ${LINUXDO_TOKEN_AUTH_METHOD:-client_secret_basic}
+      ADMIN_LINUXDO_SUBJECTS: ${ADMIN_LINUXDO_SUBJECTS:-}
     volumes:
       - game-data:/app/data
+    networks:
+      - backend
     expose:
       - "3000"
     healthcheck:
@@ -30,6 +40,9 @@ services:
         condition: service_healthy
     environment:
       DOMAIN: ${DOMAIN:?Set DOMAIN in .env}
+    networks:
+      backend:
+        ipv4_address: ${CADDY_PROXY_IP:-172.30.0.2}
     ports:
       - "80:80"
       - "443:443"
@@ -37,6 +50,11 @@ services:
       - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
       - caddy-config:/config
+networks:
+  backend:
+    ipam:
+      config:
+        - subnet: ${PROXY_SUBNET:-172.30.0.0/24}
 volumes:
   game-data:
   caddy-data:

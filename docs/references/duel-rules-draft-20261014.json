@@ -1,0 +1,462 @@
+{
+  "draftId": "DUEL-DRAFT-1",
+  "status": "unvalidated_recommended_defaults",
+  "date": "2026-10-14",
+  "authoringTimezone": "America/Denver",
+  "documentation": "../SHORT_DUEL_GAME_SYSTEM_DESIGN.md",
+  "notProductionConfig": true,
+  "mode": {
+    "kind": "growth_1v1",
+    "humansPerRoom": 2,
+    "invitationFirst": true,
+    "entryCoins": 0,
+    "permanentStakes": false,
+    "ranked": false,
+    "replacesMainMatch": true,
+    "exposeModeSelector": false,
+    "retainSinglePlayerPractice": false,
+    "legacyPve": "inflight_and_history_only_no_new_starts"
+  },
+  "room": {
+    "lobbyExpiresSec": 120,
+    "disconnectGraceSec": 60,
+    "automaticReadyAcceleration": false,
+    "pollIntervalMs": 2000,
+    "schedulerTickMs": 1000
+  },
+  "timing": {
+    "rounds": [
+      {
+        "round": 1,
+        "kind": "neutral",
+        "planningSec": 30,
+        "combatPresentationSec": 20,
+        "settlementSec": 3,
+        "population": 3,
+        "pvpLossHp": 0
+      },
+      {
+        "round": 2,
+        "kind": "pvp",
+        "planningSec": 35,
+        "combatPresentationSec": 25,
+        "settlementSec": 3,
+        "population": 3,
+        "pvpLossHp": 4
+      },
+      {
+        "round": 3,
+        "kind": "pvp",
+        "planningSec": 25,
+        "combatPresentationSec": 25,
+        "settlementSec": 3,
+        "population": 4,
+        "pvpLossHp": 4
+      },
+      {
+        "round": 4,
+        "kind": "neutral",
+        "planningSec": 25,
+        "combatPresentationSec": 20,
+        "settlementSec": 3,
+        "population": 4,
+        "pvpLossHp": 0
+      },
+      {
+        "round": 5,
+        "kind": "pvp",
+        "planningSec": 35,
+        "combatPresentationSec": 25,
+        "settlementSec": 3,
+        "population": 5,
+        "pvpLossHp": 6
+      },
+      {
+        "round": 6,
+        "kind": "pvp",
+        "planningSec": 25,
+        "combatPresentationSec": 25,
+        "settlementSec": 3,
+        "population": 5,
+        "pvpLossHp": 6
+      },
+      {
+        "round": 7,
+        "kind": "neutral",
+        "planningSec": 25,
+        "combatPresentationSec": 25,
+        "settlementSec": 3,
+        "population": 6,
+        "pvpLossHp": 0
+      },
+      {
+        "round": 8,
+        "kind": "pvp",
+        "planningSec": 35,
+        "combatPresentationSec": 25,
+        "settlementSec": 3,
+        "population": 6,
+        "pvpLossHp": 8
+      },
+      {
+        "round": 9,
+        "kind": "pvp",
+        "planningSec": 25,
+        "combatPresentationSec": 25,
+        "settlementSec": 3,
+        "population": 6,
+        "pvpLossHp": 8
+      },
+      {
+        "round": 10,
+        "kind": "pvp",
+        "planningSec": 25,
+        "combatPresentationSec": 25,
+        "settlementSec": 3,
+        "population": 6,
+        "pvpLossHp": 8
+      }
+    ],
+    "theoreticalDurationSec": 555,
+    "finalSummarySec": 5
+  },
+  "combat": {
+    "initialPlayerHp": 32,
+    "logicalRoundLimit": 24,
+    "drawAllowed": true,
+    "timeoutCompare": "remaining_total_hp_ratio",
+    "survivorExtraPlayerDamage": false
+  },
+  "loadout": {
+    "definitionCount": 8,
+    "distinctDefinitions": true,
+    "requireOwned": true,
+    "requireFrontline": true,
+    "requireRanged": true,
+    "qualitySelection": "fixed_per_definition_at_start",
+    "qualityMayProjectDown": true,
+    "shopSlots": 5,
+    "definitionSampling": "uniform_with_replacement",
+    "randomQualityPerOffer": false,
+    "rosterLimit": 15,
+    "starterCopies": 2,
+    "starterDifferentDefinitions": true,
+    "starterBasis": 0
+  },
+  "quality": {
+    "names": [
+      "微光",
+      "流光",
+      "星辉",
+      "星芒",
+      "星冕"
+    ],
+    "shopGold": [
+      10,
+      11,
+      12,
+      13,
+      14
+    ],
+    "hpMultiplier": [
+      1,
+      1.04,
+      1.08,
+      1.12,
+      1.16
+    ],
+    "attackMultiplier": [
+      1,
+      1.03,
+      1.06,
+      1.09,
+      1.12
+    ],
+    "skillCoefficientMultiplier": [
+      1,
+      1.03,
+      1.06,
+      1.09,
+      1.12
+    ]
+  },
+  "stars": {
+    "requiredCopies": 3,
+    "maxStars": 3,
+    "hpMultiplier": [
+      1,
+      1.35,
+      1.8
+    ],
+    "attackMultiplier": [
+      1,
+      1.25,
+      1.6
+    ],
+    "skillCoefficientMultiplier": [
+      1,
+      1.1,
+      1.2
+    ],
+    "basisMerge": "sum_inputs"
+  },
+  "gold": {
+    "initial": 40,
+    "baseFromRound": 2,
+    "basePerRound": 20,
+    "rerollCost": 10,
+    "interest": {
+      "per": 30,
+      "step": 1,
+      "cap": 2,
+      "basis": "frozen_pre_reward_gold"
+    },
+    "pvpSupplyPerPlayer": 2,
+    "pvpSupplyIndependentOfOutcome": true,
+    "streakBonus": 0,
+    "winGoldBonus": 0,
+    "xpPurchases": false,
+    "refund": "unit_basis",
+    "terminalFutureIncome": false,
+    "convertToPermanentCoins": false
+  },
+  "neutralCamps": [
+    {
+      "round": 1,
+      "id": "forest_sentry",
+      "name": "林间巡哨",
+      "guaranteedGold": 12,
+      "winBonusGold": 2,
+      "guaranteedEquipmentChoice": true,
+      "playerHpLossOnFailure": 0,
+      "monsters": [
+        {
+          "id": "young_spirit",
+          "name": "幼灵兽",
+          "count": 2,
+          "stats": {
+            "hp": 80,
+            "attack": 8,
+            "armor": 5,
+            "resistance": 5,
+            "range": 1,
+            "initiative": 45
+          },
+          "behavior": "basic_only",
+          "neutralLocalSlots": [
+            1,
+            5
+          ]
+        }
+      ]
+    },
+    {
+      "round": 4,
+      "id": "stone_guard",
+      "name": "石林守卫",
+      "guaranteedGold": 18,
+      "winBonusGold": 3,
+      "guaranteedEquipmentChoice": true,
+      "playerHpLossOnFailure": 0,
+      "monsters": [
+        {
+          "id": "stone_guard",
+          "name": "石甲守卫",
+          "count": 1,
+          "stats": {
+            "hp": 260,
+            "attack": 18,
+            "armor": 30,
+            "resistance": 10,
+            "range": 1,
+            "initiative": 40
+          },
+          "behavior": "basic_only",
+          "neutralLocalSlots": [
+            3
+          ]
+        },
+        {
+          "id": "crystal_thrower",
+          "name": "晶刺投手",
+          "count": 1,
+          "stats": {
+            "hp": 110,
+            "attack": 16,
+            "armor": 5,
+            "resistance": 10,
+            "range": 3,
+            "initiative": 60
+          },
+          "behavior": "basic_only",
+          "neutralLocalSlots": [
+            17
+          ]
+        }
+      ]
+    },
+    {
+      "round": 7,
+      "id": "star_nest",
+      "name": "星潮巢穴",
+      "guaranteedGold": 24,
+      "winBonusGold": 4,
+      "guaranteedEquipmentChoice": true,
+      "playerHpLossOnFailure": 0,
+      "monsters": [
+        {
+          "id": "star_beast",
+          "name": "星噬兽",
+          "count": 1,
+          "stats": {
+            "hp": 600,
+            "attack": 30,
+            "armor": 20,
+            "resistance": 20,
+            "range": 1,
+            "initiative": 45
+          },
+          "behavior": "basic_only",
+          "neutralLocalSlots": [
+            3
+          ]
+        },
+        {
+          "id": "nest_guard",
+          "name": "巢穴卫兽",
+          "count": 2,
+          "stats": {
+            "hp": 130,
+            "attack": 14,
+            "armor": 10,
+            "resistance": 10,
+            "range": 1,
+            "initiative": 55
+          },
+          "behavior": "basic_only",
+          "neutralLocalSlots": [
+            1,
+            5
+          ]
+        }
+      ]
+    }
+  ],
+  "equipment": {
+    "temporary": true,
+    "slotsPerUnit": 2,
+    "totalInstanceLimit": 12,
+    "guaranteedCompleteItemsPerFullMatch": 3,
+    "choiceGroups": [
+      "offense",
+      "defense",
+      "utility"
+    ],
+    "sameChoicesBothPlayers": true,
+    "claimWindow": "next_planning_phase",
+    "timeoutAction": "stable_preference_or_first_into_inventory",
+    "autoEquipOnTimeout": false,
+    "unequipCost": 0,
+    "canSell": false,
+    "returnOnUnitSell": true,
+    "mergePolicy": "keeper_keeps_other_items_return",
+    "addedOpeningShieldHpPctCap": 0.25,
+    "componentsEnabled": false,
+    "items": [
+      {
+        "id": "edge_sigil",
+        "name": "锋刃符",
+        "choiceGroup": "offense",
+        "uniqueGroup": "edge_sigil",
+        "effects": {
+          "attackPct": 0.12
+        }
+      },
+      {
+        "id": "astral_lens",
+        "name": "织星镜",
+        "choiceGroup": "offense",
+        "uniqueGroup": "astral_lens",
+        "effects": {
+          "skillCoefficientPct": 0.12
+        }
+      },
+      {
+        "id": "stone_mail",
+        "name": "石脉甲",
+        "choiceGroup": "defense",
+        "uniqueGroup": "stone_mail",
+        "effects": {
+          "maxHpPct": 0.15,
+          "armorFlat": 8
+        }
+      },
+      {
+        "id": "dawn_charm",
+        "name": "晨曦护符",
+        "choiceGroup": "defense",
+        "uniqueGroup": "dawn_charm",
+        "effects": {
+          "openingShieldMaxHpPct": 0.12
+        }
+      },
+      {
+        "id": "echo_prism",
+        "name": "回响棱",
+        "choiceGroup": "utility",
+        "uniqueGroup": "echo_prism",
+        "effects": {
+          "energyOnBasic": 8
+        }
+      },
+      {
+        "id": "hunter_seal",
+        "name": "猎星印",
+        "choiceGroup": "utility",
+        "uniqueGroup": "hunter_seal",
+        "effects": {
+          "everyNBasic": 3,
+          "extraPhysicalAttackRatio": 0.6,
+          "canRecurse": false,
+          "extraGrantsEnergy": false
+        }
+      }
+    ]
+  },
+  "permanentReward": {
+    "currency": "coins",
+    "base": {
+      "win": 120,
+      "loss": 100,
+      "draw": 110
+    },
+    "minimumForfeitOpponentSec": 180,
+    "minMeaningfulPlanningRounds": 4,
+    "minDistinctEverDeployed": 3,
+    "forfeiterCoins": 0,
+    "serviceAbortCoins": 0,
+    "pairQuota": {
+      "dayBoundary": "UTC",
+      "full": 3,
+      "half": 3,
+      "thenFactor": 0,
+      "key": "unordered_internal_user_pair"
+    },
+    "personalQuota": {
+      "sharedAcrossFormalModes": true,
+      "full": 6,
+      "half": 6
+    },
+    "factorCombination": "minimum",
+    "oncePerRoomPerUser": true
+  },
+  "exclusions": [
+    "rarity",
+    "permanent_equipment",
+    "extra_currency",
+    "eight_player_rooms",
+    "shared_finite_shop_pool",
+    "paid_entry",
+    "automatic_asset_migration"
+  ]
+}

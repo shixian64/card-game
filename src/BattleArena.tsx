@@ -2,7 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { ArrowRight, ArrowRightLeft, Check, ChevronDown, Crosshair, Heart, Leaf, LoaderCircle, Moon, Pause, Play, Plus, RotateCcw, Search, Shield, SkipForward, Sparkles, Sun, Sword, Trophy, Users, WandSparkles, X, Zap } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { AFFINITIES, CARD_MAP } from './data';
+import { AFFINITIES, CARD_MAP, qualityName } from './data';
+import { slotToCell, cellCenter, hexDistance } from './hex';
 import type { Affinity } from './data';
 import type { OwnedCard } from './engine';
 import { getCombatStats, getSynergies } from './battle';
@@ -71,14 +72,13 @@ function SlotCard({ card, slot, selected, canPlace, busy, onClick, onRemove, onP
   const def = card ? CARD_MAP[card.defId] : null;
   const stats = card ? getCombatStats(card) : null;
   const Icon = stats ? ROLE_ICONS[stats.role] : Plus;
-  return <div className={'battle-slot ' + (card ? 'filled ' : 'empty ') + (selected ? 'selected ' : '') + (canPlace ? 'can-place' : '')} data-rarity={def?.rarity} data-rank={card?.rank} data-slot={slot}>
+  return <div className={'battle-slot ' + (card ? 'filled ' : 'empty ') + (selected ? 'selected ' : '') + (canPlace ? 'can-place' : '')} data-rank={card?.rank} data-slot={slot}>
     <button type="button" className="battle-slot-main" onClick={onClick} onMouseEnter={event=>{if(card)onPreview?.(card,event.currentTarget);}} onMouseLeave={onPreviewEnd} onFocus={event=>{if(card)onPreview?.(card,event.currentTarget);}} onBlur={onPreviewEnd} disabled={busy} draggable={!!card && !busy} onDragStart={event => { if (card) { event.dataTransfer.setData('text/asteria-unit', card.uid); event.dataTransfer.effectAllowed = 'move'; } }} aria-pressed={selected}
       aria-label={'第 ' + (Math.floor(slot / 7) + 1) + ' 排第 ' + ((slot % 7) + 1) + ' 格' + (def ? '，' + def.name + '，点击选择换位' : '，空位，点击放置')}>
       {def && card && stats ? <>
         <img src={'/art/' + def.art + '.png'} alt="" draggable={false} />
-        <span className="battle-rarity">{def.rarity}</span>
         <span className="battle-slot-affinity"><AffinityMark affinity={def.affinity} /></span>
-        <span className="battle-slot-level">{card.stars ? '★'.repeat(card.stars) : 'Lv.' + card.rank}</span>
+        <span className="battle-slot-level">{card.stars ? '★'.repeat(card.stars) : qualityName(card.rank)}</span>
         <span className="battle-slot-caption"><strong>{def.name}</strong><span><Icon size={12} />{stats.role}<i><Heart size={11} />{stats.hp}</i></span></span>
         {selected && <span className="battle-slot-selected"><ArrowRightLeft size={13} />点击另一格换位</span>}
       </> : <><span className="battle-slot-number">{String(slot + 1).padStart(2, '0')}</span><Plus size={17} /><span>{canPlace ? '落位' : '空位'}</span></>}
@@ -104,13 +104,12 @@ function Synergies({ cards, compact = false }: { cards: OwnedCard[]; compact?: b
 type Impact = { hp: number; shield: number };
 function LiveUnit({ unit, previous, logs, tick, onPreview, onPreviewEnd }: { unit: CombatUnit; previous?: CombatUnit; logs: BattleLog[]; tick: number; onPreview?: (card: ArenaCard, element: HTMLElement, unit?: CombatUnit)=>void; onPreviewEnd?:()=>void }) {
   const Icon = ROLE_ICONS[unit.role];
-  const def = CARD_MAP[unit.defId];
   const impact: Impact = { hp: previous ? unit.hp - previous.hp : 0, shield: previous ? unit.shield - previous.shield : 0 };
   const actor = logs.some(log => log.actorId === unit.id && (log.kind === 'attack' || log.kind === 'skill'));
   const blinking = logs.some(log => log.actorId === unit.id && log.kind === 'move' && log.movement === 'blink');
   return <article className={'battle-live-unit ' + (unit.hp <= 0 ? 'is-fallen ' : '') + (actor ? 'is-acting ' : '') + (impact.hp < 0 ? 'is-hit ' : '') + (blinking ? 'is-blinking' : '')}
-    onMouseEnter={event=>onPreview?.({uid:unit.cardUid,defId:unit.defId,rank:unit.rank,stars:unit.stars,best:0},event.currentTarget,unit)} onMouseLeave={onPreviewEnd} data-rarity={def.rarity} data-rank={unit.rank} style={{ left: (unit.col / 7 * 100) + '%', top: (unit.row / 8 * 100) + '%' }} title={unit.name + ' · ' + unit.role + ' · 普攻 ' + unit.attack + ' · 射程 ' + unit.range + ' · 护甲 ' + unit.armor + ' · 法抗 ' + unit.resistance + ' · ' + unit.skillName + '：' + unit.skillDescription} aria-label={unit.name + '，' + unit.role + '，生命 ' + unit.hp + '/' + unit.maxHp + '，能量 ' + unit.energy}>
-    <div className="battle-live-art"><img src={'/art/' + unit.art + '.png'} alt="" draggable={false} /><span className="battle-rarity">{def.rarity}</span><span className="battle-live-rank">{unit.stars > 1 ? '★'.repeat(unit.stars) : 'Lv.' + unit.rank}</span>{unit.hp <= 0 && <span className="battle-fallen">退场</span>}</div>
+    onMouseEnter={event=>onPreview?.({uid:unit.cardUid,defId:unit.defId,rank:unit.rank,stars:unit.stars,best:0},event.currentTarget,unit)} onMouseLeave={onPreviewEnd} data-rank={unit.rank} style={{ left: (cellCenter({ row: unit.row, col: unit.col }).x * 100) + '%', top: (cellCenter({ row: unit.row, col: unit.col }).y * 100) + '%' }} title={unit.name + ' · ' + unit.role + ' · 普攻 ' + unit.attack + ' · 射程 ' + unit.range + ' · 护甲 ' + unit.armor + ' · 法抗 ' + unit.resistance + ' · ' + unit.skillName + '：' + unit.skillDescription} aria-label={unit.name + '，' + unit.role + '，生命 ' + unit.hp + '/' + unit.maxHp + '，能量 ' + unit.energy}>
+    <div className="battle-live-art"><img src={'/art/' + unit.art + '.png'} alt="" draggable={false} /><span className="battle-live-rank">{unit.stars > 1 ? '★'.repeat(unit.stars) : qualityName(unit.rank)}</span>{unit.hp <= 0 && <span className="battle-fallen">退场</span>}</div>
     <div className="battle-live-info"><strong>{unit.name}</strong><span className="battle-live-role"><Icon size={11} />{unit.role}<i><AffinityMark affinity={unit.affinity} /></i></span>
       <div className="battle-hp-label"><span><Heart size={10} />{unit.hp}<small>/{unit.maxHp}</small></span>{unit.shield > 0 && <b><Shield size={10} />{unit.shield}</b>}</div>
       <div className="battle-health" role="progressbar" aria-label={unit.name + '生命'} aria-valuenow={unit.hp} aria-valuemin={0} aria-valuemax={unit.maxHp}><span style={{ width: unit.hp / unit.maxHp * 100 + '%' }} /></div>
@@ -133,8 +132,8 @@ function BattleEffects({ current, logs, tick }: { current: Pick<BattleState, 'pl
       const actor = units.find(unit => unit.id === log.actorId);
       const target = units.find(unit => unit.id === log.targetId);
       if (!actor || !target) return null;
-      const ax = actor.col * 100 + 50, ay = actor.row * 100 + 50;
-      const tx = target.col * 100 + 50, ty = target.row * 100 + 50;
+      const ax = cellCenter({ row: actor.row, col: actor.col }).x * 700, ay = cellCenter({ row: actor.row, col: actor.col }).y * 800;
+      const tx = cellCenter({ row: target.row, col: target.col }).x * 700, ty = cellCenter({ row: target.row, col: target.col }).y * 800;
       const effect = log.kind === 'heal' ? 'heal' : log.kind === 'shield' ? 'shield' : isSkill ? actor.effect : actor.range > 1 ? 'projectile' : 'slash';
       return <g className={'battle-effect effect-' + effect + ' rank-' + actor.rank} key={log.id + ':' + index}>
         {(effect === 'projectile' || effect === 'blast') && <><path className="battle-shot-trail" d={'M ' + ax + ' ' + ay + ' L ' + tx + ' ' + ty} /><path className="battle-shot" pathLength="100" d={'M ' + ax + ' ' + ay + ' L ' + tx + ' ' + ty} /></>}
@@ -163,7 +162,7 @@ function CardHoverPreview({hover}:{hover:HoverCard|null}) {
   if(!hover)return null;
   const def=CARD_MAP[hover.card.defId], base=getCombatStats(hover.card);
   const stats=hover.unit?{...base,hp:hover.unit.maxHp,attack:hover.unit.attack,armor:hover.unit.armor,resistance:hover.unit.resistance}:base;
-  return <aside className="arena-card-peek" role="tooltip" style={{left:hover.x,top:hover.y}}><img src={'/art/'+def.art+'.png'} alt=""/><div><h3>{def.name}</h3><span>{stats.role} · {AFFINITIES[def.affinity].name} · Lv.{hover.card.rank}{hover.card.stars?' · '+'★'.repeat(hover.card.stars):''}</span><dl><div><dt>生命</dt><dd>{stats.hp}</dd></div><div><dt>普攻</dt><dd>{stats.attack}</dd></div><div><dt>射程</dt><dd>{stats.range} 格</dd></div><div><dt>护甲</dt><dd>{stats.armor}</dd></div><div><dt>法抗</dt><dd>{stats.resistance}</dd></div><div><dt>先手</dt><dd>{stats.speed}</dd></div></dl><p><b>{stats.skillName}</b>{stats.skillDescription}</p></div></aside>;
+  return <aside className="arena-card-peek" role="tooltip" style={{left:hover.x,top:hover.y}}><img src={'/art/'+def.art+'.png'} alt=""/><div><h3>{def.name}</h3><span>{stats.role} · {AFFINITIES[def.affinity].name} · {qualityName(hover.card.rank)}品质{hover.card.stars?' · '+'★'.repeat(hover.card.stars):''}</span><dl><div><dt>生命</dt><dd>{stats.hp}</dd></div><div><dt>普攻</dt><dd>{stats.attack}</dd></div><div><dt>射程</dt><dd>{stats.range} 格</dd></div><div><dt>护甲</dt><dd>{stats.armor}</dd></div><div><dt>法抗</dt><dd>{stats.resistance}</dd></div><div><dt>先手</dt><dd>{stats.speed}</dd></div></dl><p><b>{stats.skillName}</b>{stats.skillDescription}</p></div></aside>;
 }
 
 export function BattleArena({ cards, battle, busy, onStart, onAction, onAbandon, formation, onFormationChange, maxUnits = 6, startLabel = '开始对战', startDisabled = false, replayOnly = false, replayDurationMs = 30000, embedded = false, rosterMode = 'collection', onSellUnit }: BattleArenaProps) {
@@ -208,8 +207,10 @@ export function BattleArena({ cards, battle, busy, onStart, onAction, onAbandon,
   const selectedCard = selectedPool ? cardMap.get(selectedPool) : selectedSlot !== null && slots[selectedSlot] ? cardMap.get(slots[selectedSlot]!) : undefined;
   const selectedStats = selectedCard ? getCombatStats(selectedCard) : undefined;
   function isInRange(slot: number) {
-    return selectedSlot !== null && !!selectedStats && Math.abs(Math.floor(slot / 7) - Math.floor(selectedSlot / 7)) + Math.abs(slot % 7 - selectedSlot % 7) <= selectedStats.range;
+    return selectedSlot !== null && !!selectedStats && hexDistance(slotToCell(slot, 'player'), slotToCell(selectedSlot, 'player')) <= selectedStats.range;
   }
+  // 部署半场（rows 4–7）内的格心投影：x 用全场 7.5 列宽归一，y 压缩到下半场四行。
+  const deployCenter = (slot: number) => { const cell = slotToCell(slot, 'player'); return { x: cellCenter(cell).x, y: (cell.row - 4 + 0.5) / 4 }; };
   const hasBattle = !!battle;
   const playing = battle?.status === 'playing';
   const frameCount = battle?.frames.length ?? 0;
@@ -371,11 +372,11 @@ export function BattleArena({ cards, battle, busy, onStart, onAction, onAbandon,
       <div className="battle-deployment">
         <div className="battle-board-top"><span><Sword size={15} />敌方方向</span><button onClick={autoPlace} disabled={busy || choices.length === 0}><WandSparkles size={15} />推荐布阵</button></div>
         <div className="battle-deploy-field">
-        <div className="battle-deploy-ghost-grid" aria-hidden="true">{Array.from({length:28},(_,index)=><span key={index}/>)}</div>
+        <div className="battle-deploy-ghost-grid" aria-hidden="true">{Array.from({length:28},(_,slot)=>{const ghost=slotToCell(slot,'enemy');const center=cellCenter(ghost);return <span key={slot} style={{left:center.x*100+'%',top:((ghost.row+0.5)/4)*100+'%'}}/>;})}</div>
         <div className="battle-deploy-labels"><span>前排 · 靠近敌方</span><small>点击卡牌 → 点击格子 · 已上阵卡可互换</small></div>
-        <div className="battle-deploy-board">{Array.from({ length: 28 }, (_, slot) => <div className={'battle-deploy-cell ' + (isInRange(slot) ? 'in-range' : '')} key={slot} onDragOver={event => { if (!busy) { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; } }} onDrop={event => { event.preventDefault(); dropCard(event.dataTransfer.getData('text/asteria-unit'), slot); }}>
+        <div className="battle-deploy-board">{Array.from({ length: 28 }, (_, slot) => { const center = deployCenter(slot); return <div className={'battle-deploy-cell ' + (isInRange(slot) ? 'in-range' : '')} key={slot} data-slot={slot} data-row={Math.floor(slot / 7)} style={{ left: center.x * 100 + '%', top: center.y * 100 + '%' }} onDragOver={event => { if (!busy) { event.preventDefault(); event.dataTransfer.dropEffect = 'move'; } }} onDrop={event => { event.preventDefault(); dropCard(event.dataTransfer.getData('text/asteria-unit'), slot); }}>
           <SlotCard card={slots[slot] ? cardMap.get(slots[slot]!) : undefined} slot={slot} selected={selectedSlot === slot} canPlace={!!selectedPool || selectedSlot !== null} busy={busy || (!slots[slot] && chosenCards.length >= maxUnits && selectedSlot === null && !!selectedPool)} onClick={() => place(slot)} onRemove={() => remove(slot)} onPreview={preview} onPreviewEnd={()=>setHoveredCard(null)} />
-        </div>)}</div>
+        </div>; })}</div>
         </div>
         <div className="battle-deploy-labels bottom"><span>后排 · 保护核心输出</span><small>{selectedSlot !== null && selectedStats ? '金色格：普攻射程 ' + selectedStats.range + ' 格' : matchMode ? '棋盘可放置 ' + maxUnits + ' 张星灵' : '同名星灵仅能上阵一张'}</small></div>
         <div className="battle-board-hint" role="status"><ArrowRightLeft size={14} /><span>{hint}</span></div>
@@ -384,10 +385,10 @@ export function BattleArena({ cards, battle, busy, onStart, onAction, onAbandon,
       <button type="button" className="battle-inspector-toggle" aria-expanded={showInspector} onClick={()=>setShowInspector(value=>!value)}>卡牌详情与羁绊 {showInspector?'收起':'展开'}</button>
       <div className={'battle-builder-inspector '+(showInspector?'is-open':'')}>
         {selectedCard && selectedStats ? <div className="battle-card-detail">
-          <div className="battle-detail-top"><img src={'/art/' + CARD_MAP[selectedCard.defId].art + '.png'} alt="" /><div><span>{CARD_MAP[selectedCard.defId].rarity} · {matchMode ? '永久 ' : ''}Lv.{selectedCard.rank}{matchMode && <i className="battle-detail-stars">局内 {'★'.repeat(selectedCard.stars ?? 1)}</i>}</span><h2>{CARD_MAP[selectedCard.defId].name}</h2><p>{selectedStats.role} · {AFFINITIES[CARD_MAP[selectedCard.defId].affinity].name}</p></div></div>
+          <div className="battle-detail-top"><img src={'/art/' + CARD_MAP[selectedCard.defId].art + '.png'} alt="" /><div><span>{matchMode ? '永久 ' : ''}{qualityName(selectedCard.rank)}品质{matchMode && <i className="battle-detail-stars">局内 {'★'.repeat(selectedCard.stars ?? 1)}</i>}</span><h2>{CARD_MAP[selectedCard.defId].name}</h2><p>{selectedStats.role} · {AFFINITIES[CARD_MAP[selectedCard.defId].affinity].name}</p></div></div>
           <dl className="battle-stat-grid"><div><dt>生命</dt><dd>{selectedStats.hp}</dd></div><div><dt>普攻</dt><dd>{selectedStats.attack}</dd></div><div><dt>射程</dt><dd>{selectedStats.range}<small> 格</small></dd></div><div><dt>护甲</dt><dd>{selectedStats.armor}</dd></div><div><dt>法抗</dt><dd>{selectedStats.resistance}</dd></div><div><dt>先手</dt><dd>{selectedStats.speed}</dd></div></dl>
           <p className="battle-detail-skill"><b><Sparkles size={13} />{selectedStats.skillName}</b>{selectedStats.skillDescription}</p>
-          <span className="battle-detail-note">曼哈顿距离判定射程，能量满 100 自动施放技能。</span>
+          <span className="battle-detail-note">错列六边形距离判定射程（相邻格距离 1），能量满 100 自动施放技能。</span>
         </div> : <div className="battle-inspect-hint"><Crosshair size={24} /><p>选择一张卡牌</p><span>查看普攻、射程、防御与技能</span></div>}
         <Synergies cards={chosenCards} compact />
       </div>
@@ -395,14 +396,14 @@ export function BattleArena({ cards, battle, busy, onStart, onAction, onAbandon,
     <div className="battle-roster-toolbar"><div><h2>{matchMode ? '本局备战区' : '我的卡池'} <span>{choices.length}{matchMode ? ' / 15' : ''}</span></h2><p>{matchMode ? '相同星级的 3 张同名卡会自动合星；未上阵卡保留在备战区。' : '每种星灵只显示最高等级；同名卡只能上阵一张。'}</p></div><label><Search size={15} /><input value={search} onChange={event => setSearch(event.target.value)} placeholder="名称 / 职业 / 属性" aria-label="搜索出战卡牌" />{search && <button onClick={() => setSearch('')} aria-label="清除搜索"><X size={13} /></button>}</label></div>
     <div className="battle-roster">{filtered.map(card => {
       const def = CARD_MAP[card.defId], stats = getCombatStats(card), Icon = ROLE_ICONS[stats.role], placed = slots.includes(card.uid), selected = selectedPool === card.uid || (selectedSlot !== null && slots[selectedSlot] === card.uid);
-      return <div className="battle-bench-card" key={card.uid}><button type="button" className={'battle-pick ' + (placed ? 'placed ' : '') + (selected ? 'selected' : '')} data-rarity={def.rarity} data-rank={card.rank} draggable={!busy} onDragStart={event => { event.dataTransfer.setData('text/asteria-unit', card.uid); event.dataTransfer.effectAllowed = 'move'; }} onClick={() => pick(card)} onMouseEnter={event=>preview(card,event.currentTarget)} onMouseLeave={()=>setHoveredCard(null)} onFocus={event=>preview(card,event.currentTarget)} onBlur={()=>setHoveredCard(null)} disabled={busy} aria-pressed={selected} aria-label={def.name + '，Lv.' + card.rank + '，' + stats.role + (placed ? '，已上阵，点击换位' : '，点击选择')}>
-        <div className="battle-pick-art"><img src={'/art/' + def.art + '.png'} alt="" loading="lazy" draggable={false} /><span className="battle-rarity">{def.rarity}</span><span className="battle-pick-rank">Lv.{card.rank}</span>{matchMode && <span className="battle-pick-stars" aria-label={'局内 ' + (card.stars ?? 1) + ' 星'}>{'★'.repeat(card.stars ?? 1)}</span>}<span className="battle-pick-affinity"><AffinityMark affinity={def.affinity} /></span>{placed && <span className="battle-pick-status"><Check size={12} />已上阵</span>}</div>
+      return <div className="battle-bench-card" key={card.uid}><button type="button" className={'battle-pick ' + (placed ? 'placed ' : '') + (selected ? 'selected' : '')} data-rank={card.rank} draggable={!busy} onDragStart={event => { event.dataTransfer.setData('text/asteria-unit', card.uid); event.dataTransfer.effectAllowed = 'move'; }} onClick={() => pick(card)} onMouseEnter={event=>preview(card,event.currentTarget)} onMouseLeave={()=>setHoveredCard(null)} onFocus={event=>preview(card,event.currentTarget)} onBlur={()=>setHoveredCard(null)} disabled={busy} aria-pressed={selected} aria-label={def.name + '，' + qualityName(card.rank) + '品质，' + stats.role + (placed ? '，已上阵，点击换位' : '，点击选择')}>
+        <div className="battle-pick-art"><img src={'/art/' + def.art + '.png'} alt="" loading="lazy" draggable={false} /><span className="battle-pick-rank">{qualityName(card.rank)}</span>{matchMode && <span className="battle-pick-stars" aria-label={'局内 ' + (card.stars ?? 1) + ' 星'}>{'★'.repeat(card.stars ?? 1)}</span>}<span className="battle-pick-affinity"><AffinityMark affinity={def.affinity} /></span>{placed && <span className="battle-pick-status"><Check size={12} />已上阵</span>}</div>
         <div className="battle-pick-copy"><strong>{def.name}</strong><span><Icon size={12} />{stats.role}<small><Heart size={11} />{stats.hp}<Sword size={11} />{stats.attack}</small></span><p>{stats.skillName}</p></div>
       </button>{onSellUnit && <button className="battle-sell-unit" disabled={busy} onClick={() => onSellUnit(card.uid)} aria-label={'出售 ' + def.name}><span>出售</span><small>{(card.stars ?? 1) === 3 ? '三星' : (card.stars ?? 1) === 2 ? '二星' : '一星'}</small></button>}</div>;
     })}</div>
     {!filtered.length && <p className="battle-empty">{choices.length ? '没有找到符合条件的卡牌。' : matchMode ? '备战区为空，在本局商店招募星灵。' : '还没有可上阵的星灵，先去抽卡扩充收藏。'}</p>}
     {!matchMode && choices.length < maxUnits && <p className="battle-footnote">还需拥有 {maxUnits - choices.length} 种不同星灵才能开始。抽卡、市场交易与好友赠送都能扩充卡池。</p>}
-    <details className="battle-rules"><summary>站位与自动战斗说明<ChevronDown size={13} /></summary><div><p><b>前排与后排</b>　每方 4 × 7 格，按人口上限自由放置星灵。卡牌会移动靠近射程内的敌人，不会隔着棋盘凭空攻击。</p><p><b>能量与技能</b>　攻击和受击积攒能量，达到 100 后下一次行动自动释放技能。</p><p><b>属性克制</b>　月克日，日克森，森克月。每升一级仅增加 3% 生命、2% 攻击；等级更明显地改变卡框、登场与技能光效。</p></div></details>
+    <details className="battle-rules"><summary>站位与自动战斗说明<ChevronDown size={13} /></summary><div><p><b>前排与后排</b>　每方 4 排 × 7 列错列六边形格，按人口上限自由放置星灵。卡牌沿六边形邻接移动靠近射程内的敌人，不会隔着棋盘凭空攻击。</p><p><b>能量与技能</b>　攻击和受击积攒能量，达到 100 后下一次行动自动释放技能。</p><p><b>属性克制</b>　月克日，日克森，森克月。品质每升一档增加 4% 生命、3% 攻击与 3% 技能系数；高品质卡在局内商店更贵。</p></div></details>
     <CardHoverPreview hover={hoveredCard}/>
   </section>;
 
@@ -423,7 +424,8 @@ export function BattleArena({ cards, battle, busy, onStart, onAction, onAbandon,
       <div className="battle-field">
         <div className="battle-side-label"><span>对方阵容</span><small>{current.enemy.filter(unit => unit.hp > 0).length} / {current.enemy.length} 存活</small></div>
         <div className="battle-tactics-board" data-speed={speed} style={{'--move-duration': Math.min(speed === 2 ? 210 : 390, replayOnly ? replayDurationMs / Math.max(1, frameCount) / speed * .85 : 390) + 'ms'} as CSSProperties}>
-          <div className="battle-board-grid" aria-hidden="true">{Array.from({ length: 56 }, (_, index) => <span key={index} className={(index < 28 ? 'enemy-cell' : 'player-cell') + (Math.floor(index / 7) === 3 ? ' battle-midline' : '')} />)}</div>
+          <div className="battle-board-grid" aria-hidden="true">{Array.from({ length: 56 }, (_, index) => { const row = Math.floor(index / 7), col = index % 7, center = cellCenter({ row, col }); return <span key={index} className={(row < 4 ? 'enemy-cell' : 'player-cell') + (row === 3 ? ' battle-midline' : '')} style={{ left: center.x * 100 + '%', top: center.y * 100 + '%' }} />; })}</div>
+          <span className="battle-midline-divider" aria-hidden="true" />
           <span className="battle-field-watermark enemy">OPPONENT</span><span className="battle-field-watermark player">YOUR TEAM</span>
           {[...current.enemy, ...current.player].map(unit => <LiveUnit key={unit.id} unit={unit} previous={playing ? previousUnits.get(unit.id) : undefined} logs={logs} tick={tick} onPreview={preview} onPreviewEnd={()=>setHoveredCard(null)} />)}
           {playing && <BattleEffects current={current} logs={logs} tick={tick} />}

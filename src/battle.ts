@@ -1,6 +1,7 @@
-import { CARDS, CARD_MAP } from './data.ts';
+import { CARDS, CARD_MAP, QUALITY, QUALITY_MAX } from './data.ts';
 import type { Affinity } from './data.ts';
 import type { OwnedCard } from './engine.ts';
+import { hexDistance, slotToCell, neighbors as hexNeighbors, boardCells, HEX_COLS } from './hex.ts';
 
 export type BattleCard = OwnedCard & {stars?:1|2|3};
 export type CombatRole = '坦克'|'战士'|'射手'|'法师'|'刺客';
@@ -8,7 +9,7 @@ export type CombatEffect = 'slash'|'projectile'|'blast'|'shield'|'dash';
 export interface CombatUnit {
   id:string;cardUid:string;defId:string;name:string;affinity:Affinity;art:string;rank:number;stars:1|2|3;
   role:CombatRole;maxHp:number;hp:number;attack:number;shield:number;cooldown:number;
-  skillName:string;skillDescription:string;slot:number;energy:number;speed:number;
+  skillName:string;skillDescription:string;skillPower:number;skillSecondary:number;slot:number;energy:number;speed:number;
   row:number;col:number;range:number;armor:number;resistance:number;effect:CombatEffect;
 }
 export interface BattleLog {
@@ -19,16 +20,16 @@ export interface BattleLog {
 export interface Synergy {id:string;name:string;count:number;threshold:number;active:boolean;description:string}
 export interface BattleFrame {tick:number;round:number;player:CombatUnit[];enemy:CombatUnit[];logs:BattleLog[]}
 export interface BattleState {
-  version:2;id:string;status:'playing'|'won'|'lost';round:number;maxRounds:number;
+  version:2|3;id:string;status:'playing'|'won'|'lost';round:number;maxRounds:number;
   player:CombatUnit[];enemy:CombatUnit[];logs:BattleLog[];seed:number;rng:number;revision:number;
   reason?:'elimination'|'round-limit';frames:BattleFrame[];outcome:'won'|'lost';
   synergies:{player:Synergy[];enemy:Synergy[]};
 }
 export type BattleAction = {type:'resolve'};
-export interface BattleOptions {enemyCount?:number}
+export interface BattleOptions {enemyCount?:number;enemyRank?:number;enemyTeam?:BattleCard[]}
 interface RoleDef {role:CombatRole;hp:number;attack:number;speed:number;range:number;armor:number;resistance:number;effect:CombatEffect}
-export interface CombatStats extends RoleDef {skillName:string;skillDescription:string}
-interface CardCombatDef {skillName:string;power:number;secondary:number;range?:number;armor?:number;resistance?:number}
+export interface CombatStats extends RoleDef {skillName:string;skillDescription:string;skillPower:number;skillSecondary:number}
+export interface CardCombatDef {skillName:string;power:number;secondary:number;range?:number;armor?:number;resistance?:number}
 const ROLES:Record<string,RoleDef> = {
   'moon-deer':{role:'坦克',hp:180,attack:14,armor:45,resistance:35,range:1,speed:40,effect:'shield'},
   'forest-rabbit':{role:'战士',hp:145,attack:23,armor:28,resistance:20,range:1,speed:55,effect:'slash'},
@@ -76,6 +77,10 @@ const CARD_COMBAT:Record<string,CardCombatDef> = {
   'emerald-mirror':{skillName:'翠镜回锋',power:1.15,secondary:.80,range:2,armor:30},
   'bough-embrace':{skillName:'连枝环斩',power:1.25,secondary:.75,armor:31},
 };
+// 基础职业表与卡种技能变体：duel-sim 复用同一份配置计算双人局属性（倍率另传），
+// 只读不改；旧局行为完全不受影响。
+export const ROLE_BASE_STATS: Readonly<Record<string,RoleDef>> = ROLES;
+export const CARD_COMBAT_DEFS: Readonly<Record<string,CardCombatDef>> = CARD_COMBAT;
 export const DEFAULT_BATTLE_SLOTS:ReadonlyArray<number> = Object.freeze([1,3,5,22,24,26]);
 const ROLE_IDS:Record<CombatRole,string> = {坦克:'tank',战士:'warrior',射手:'marksman',法师:'mage',刺客:'assassin'};
 const ROLE_TEXT:Record<CombatRole,string> = {坦克:'坦克最大生命 +8%。',战士:'战士攻击 +12%。',射手:'射手每次普攻额外获得 10 能量。',法师:'法师技能伤害 +15%。',刺客:'刺客技能伤害 +15%。'};
@@ -89,23 +94,25 @@ function ensure(condition:unknown,message:string):asserts condition {if(!conditi
 function checkCard(card:BattleCard):void {
   ensure(card&&typeof card.uid==='string'&&card.uid.length>0&&card.uid.length<=128,'卡牌实例不合法');
   ensure(typeof card.defId==='string'&&Object.hasOwn(CARD_MAP,card.defId)&&Object.hasOwn(CARD_COMBAT,card.defId),'未知战斗卡牌');
-  ensure([1,2,3].includes(card.rank),'永久等级不合法');
+  ensure(Number.isInteger(card.rank)&&card.rank>=1&&card.rank<=QUALITY_MAX,'永久品质不合法');
   ensure(card.stars===undefined||[1,2,3].includes(card.stars),'局内星级不合法');
 }
 function decimal(value:number):number {return Math.round(value*10)/10;}
-function skillText(role:CombatRole,card:CardCombatDef):string {
-  const power=Number((card.power*100).toFixed(2)),extra=Number((card.secondary*100).toFixed(2));
-  if(role==='坦克')return '获得最大生命 '+power+'% 的护盾；有盾时优先吸引 2 格内敌人。';
-  if(role==='战士')return '目标受到 '+power+'% 物理伤害，身旁 1 格其他敌人受到 '+extra+'% 物理伤害。';
-  if(role==='射手')return '连射两次，每次 '+power+'% 物理伤害；后排部署可狙击后排，仍需进入射程。';
-  if(role==='法师')return '目标受到 '+power+'% 法术伤害，目标周围 1 格敌人受到 '+extra+'% 法术伤害。';
-  return '开场突入后排空格；技能造成 '+power+'% 单体物理伤害。';
+function qualitySkill(base:number,rank:number):number {return Number((base*(1+(rank-1)*QUALITY.growth.skill/100)).toFixed(4));}
+function skillText(role:CombatRole,_card:CardCombatDef,power:number,secondary:number):string {
+  const main=Number((power*100).toFixed(2)),extra=Number((secondary*100).toFixed(2));
+  if(role==='坦克')return '获得最大生命 '+main+'% 的护盾；有盾时优先吸引 2 格内敌人。';
+  if(role==='战士')return '目标受到 '+main+'% 物理伤害，身旁 1 格其他敌人受到 '+extra+'% 物理伤害。';
+  if(role==='射手')return '连射两次，每次 '+main+'% 物理伤害；后排部署可狙击后排，仍需进入射程。';
+  if(role==='法师')return '目标受到 '+main+'% 法术伤害，目标周围 1 格敌人受到 '+extra+'% 法术伤害。';
+  return '开场突入后排空格；技能造成 '+main+'% 单体物理伤害。';
 }
 export function getCombatStats(card:BattleCard):CombatStats {
-  checkCard(card);const base=ROLES[CARD_MAP[card.defId].art],variant=CARD_COMBAT[card.defId],stars=card.stars??1;
+  checkCard(card);const base=ROLES[CARD_MAP[card.defId].art],variant=CARD_COMBAT[card.defId],stars=card.stars??1,quality=card.rank;
   ensure(base,'该卡牌尚未配置战斗职业');
-  return {...base,hp:Math.round(base.hp*(1+(card.rank-1)*.03)*(1+(stars-1)*.12)),attack:decimal(base.attack*(1+(card.rank-1)*.02)*(1+(stars-1)*.08)),
-    skillName:variant.skillName,skillDescription:skillText(base.role,variant),range:variant.range??base.range,armor:variant.armor??base.armor,resistance:variant.resistance??base.resistance};
+  const skillPower=qualitySkill(variant.power,quality),skillSecondary=qualitySkill(variant.secondary,quality);
+  return {...base,hp:Math.round(base.hp*(1+(quality-1)*QUALITY.growth.hp/100)*(1+(stars-1)*.12)),attack:decimal(base.attack*(1+(quality-1)*QUALITY.growth.attack/100)*(1+(stars-1)*.08)),
+    skillPower,skillSecondary,skillName:variant.skillName,skillDescription:skillText(base.role,variant,skillPower,skillSecondary),range:variant.range??base.range,armor:variant.armor??base.armor,resistance:variant.resistance??base.resistance};
 }
 /** Distinct definitions, not repeated copies, activate bonds. */
 export function getSynergies(team:BattleCard[]):Synergy[] {
@@ -131,8 +138,9 @@ function unit(card:BattleCard,id:string,slot:number,side:Side,synergies:Synergy[
   if(def.affinity==='sun')attack=decimal(attack*(active(synergies,'affinity-sun-4')?1.18:active(synergies,'affinity-sun-2')?1.08:1));
   if(stats.role==='战士'&&roleBond(synergies,'战士'))attack=decimal(attack*1.12);
   const shield=def.affinity==='moon'?Math.round(hp*(active(synergies,'affinity-moon-4')?.25:active(synergies,'affinity-moon-2')?.12:0)):0;
+  const cell=slotToCell(slot,side);
   return {id,cardUid:card.uid,defId:card.defId,name:def.name,affinity:def.affinity,art:def.art,rank:card.rank,stars:card.stars??1,...stats,hp,maxHp:hp,attack,shield,cooldown:0,slot,energy:30,
-    row:side==='player'?4+Math.floor(slot/7):3-Math.floor(slot/7),col:slot%7};
+    row:cell.row,col:cell.col};
 }
 function random(state:{rng:number}):number {
   let x=state.rng||0x9e3779b9;x^=x<<13;x^=x>>>17;x^=x<<5;state.rng=x>>>0;return state.rng/4294967296;
@@ -141,7 +149,8 @@ function fingerprint(value:string):string {
   let hash=2166136261;for(const ch of value){hash^=ch.charCodeAt(0);hash=Math.imul(hash,16777619);}return (hash>>>0).toString(36);
 }
 function alive(units:CombatUnit[]):CombatUnit[] {return units.filter(u=>u.hp>0);}
-export function combatDistance(a:{row:number;col:number},b:{row:number;col:number}):number {return Math.abs(a.row-b.row)+Math.abs(a.col-b.col);}
+/** 六边形步数距离（相邻为 1）；保留 combatDistance 名称供既有调用与测试使用。 */
+export function combatDistance(a:{row:number;col:number},b:{row:number;col:number}):number {return hexDistance(a,b);}
 export function affinityMultiplier(attacker:Affinity,defender:Affinity):number {
   if(attacker===defender)return 1;return {moon:'sun',sun:'forest',forest:'moon'}[attacker]===defender?1.25:.85;
 }
@@ -170,29 +179,29 @@ function hit(state:Simulation,actor:CombatUnit,target:CombatUnit,power:number,si
   if(target.hp===0){target.shield=0;log(state,{side,kind:'defeat',actorId:actor.id,targetId:target.id,text:target.name+' 已退场。'});}
 }
 function skill(state:Simulation,actor:CombatUnit,enemies:CombatUnit[],side:Side,target:CombatUnit):void {
-  const variant=CARD_COMBAT[actor.defId];actor.energy=0;
+  actor.energy=0;
   log(state,{side,kind:'skill',actorId:actor.id,text:actor.name+' 使用「'+actor.skillName+'」。'});
   if(actor.role==='坦克'){
-    const gained=Math.min(actor.maxHp-actor.shield,Math.round(actor.maxHp*variant.power*getOvertimeModifiers(state.round).shield));actor.shield+=gained;
+    const gained=Math.min(actor.maxHp-actor.shield,Math.round(actor.maxHp*actor.skillPower*getOvertimeModifiers(state.round).shield));actor.shield+=gained;
     log(state,{side,kind:'shield',actorId:actor.id,targetId:actor.id,amount:gained,text:actor.name+' 获得 '+gained+' 护盾，吸引附近敌人。'});
   }else if(actor.role==='法师'){
     const factor=roleBond(state.synergies[side],'法师')?1.15:1,adjacent=alive(enemies).filter(u=>u.id!==target.id&&combatDistance(target,u)<=1);
-    hit(state,actor,target,variant.power*factor,side,'magic');
-    for(const other of adjacent)hit(state,actor,other,variant.secondary*factor,side,'magic');
+    hit(state,actor,target,actor.skillPower*factor,side,'magic');
+    for(const other of adjacent)hit(state,actor,other,actor.skillSecondary*factor,side,'magic');
   }else if(actor.role==='射手'){
-    hit(state,actor,target,variant.power,side,'physical');if(target.hp>0)hit(state,actor,target,variant.power,side,'physical');
+    hit(state,actor,target,actor.skillPower,side,'physical');if(target.hp>0)hit(state,actor,target,actor.skillPower,side,'physical');
   }else if(actor.role==='战士'){
     const adjacent=alive(enemies).filter(u=>u.id!==target.id&&combatDistance(actor,u)<=1);
-    hit(state,actor,target,variant.power,side,'physical');
-    for(const other of adjacent)hit(state,actor,other,variant.secondary,side,'physical');
-  }else hit(state,actor,target,variant.power*(roleBond(state.synergies[side],'刺客')?1.15:1),side,'physical');
+    hit(state,actor,target,actor.skillPower,side,'physical');
+    for(const other of adjacent)hit(state,actor,other,actor.skillSecondary,side,'physical');
+  }else hit(state,actor,target,actor.skillPower*(roleBond(state.synergies[side],'刺客')?1.15:1),side,'physical');
 }
 /** Assassins blink once, on their first action, into an empty cell near the opposing rear. */
 function openingBlink(state:Simulation,actor:CombatUnit,enemies:CombatUnit[],side:Side):void {
   const live=alive(enemies),rear=[...live].sort((a,b)=>(side==='player'?a.row-b.row:b.row-a.row)||a.slot-b.slot)[0];
-  const occupied=new Set([...alive(state.player),...alive(state.enemy)].filter(u=>u.id!==actor.id).map(u=>u.row*7+u.col));
-  const cells=Array.from({length:56},(_,index)=>({row:Math.floor(index/7),col:index%7}))
-    .filter(cell=>!occupied.has(cell.row*7+cell.col))
+  const occupied=new Set([...alive(state.player),...alive(state.enemy)].filter(u=>u.id!==actor.id).map(u=>u.row*HEX_COLS+u.col));
+  const cells=boardCells()
+    .filter(cell=>!occupied.has(cell.row*HEX_COLS+cell.col))
     .sort((a,b)=>combatDistance(a,rear)-combatDistance(b,rear)||(side==='player'?a.row-b.row:b.row-a.row)||Math.abs(a.col-actor.col)-Math.abs(b.col-actor.col)||a.col-b.col);
   const destination=cells[0],distance=combatDistance(actor,destination);
   if(distance===0)return;actor.row=destination.row;actor.col=destination.col;
@@ -200,16 +209,18 @@ function openingBlink(state:Simulation,actor:CombatUnit,enemies:CombatUnit[],sid
 }
 /** A shortest collision-free path ends in real attack range; walking advances only one cell. */
 function moveToward(state:Simulation,actor:CombatUnit,target:CombatUnit,side:Side):void {
-  const occupied=new Set([...alive(state.player),...alive(state.enemy)].filter(u=>u.id!==actor.id).map(u=>u.row*7+u.col));
-  const start=actor.row*7+actor.col,seen=new Set([start]),queue=[{row:actor.row,col:actor.col,first:-1}];
+  const occupied=new Set([...alive(state.player),...alive(state.enemy)].filter(u=>u.id!==actor.id).map(u=>u.row*HEX_COLS+u.col));
+  const start=actor.row*HEX_COLS+actor.col,seen=new Set([start]),queue=[{row:actor.row,col:actor.col,first:-1}];
   let destination:{row:number;col:number}|undefined;
   for(let index=0;index<queue.length;index++){
     const current=queue[index];
-    if(current.first!==-1&&combatDistance(current,target)<=actor.range){destination={row:Math.floor(current.first/7),col:current.first%7};break;}
-    const neighbors=[{row:current.row-1,col:current.col},{row:current.row+1,col:current.col},{row:current.row,col:current.col-1},{row:current.row,col:current.col+1}]
-      .filter(p=>p.row>=0&&p.row<8&&p.col>=0&&p.col<7).sort((a,b)=>combatDistance(a,target)-combatDistance(b,target)||a.row-b.row||a.col-b.col);
-    for(const next of neighbors){
-      const key=next.row*7+next.col;if(seen.has(key)||occupied.has(key))continue;
+    if(current.first!==-1&&combatDistance(current,target)<=actor.range){destination={row:Math.floor(current.first/HEX_COLS),col:current.first%HEX_COLS};break;}
+    // 平局规则与阵营无关（先按到目标距离，再按到目标列的横向距离，最后按列号），
+    // 避免绝对行号偏好给某一方系统性寻路优势。
+    const steps=hexNeighbors(current)
+      .sort((a,b)=>combatDistance(a,target)-combatDistance(b,target)||Math.abs(a.col-target.col)-Math.abs(b.col-target.col)||a.col-b.col);
+    for(const next of steps){
+      const key=next.row*HEX_COLS+next.col;if(seen.has(key)||occupied.has(key))continue;
       seen.add(key);queue.push({...next,first:current.first===-1?key:current.first});
     }
   }
@@ -261,20 +272,27 @@ export function createBattle(team:BattleCard[],seed:number,slots?:readonly numbe
   ensure(Array.isArray(team)&&team.length>=1&&team.length<=6,'请选择 1–6 张卡牌出战');for(const card of team)checkCard(card);
   ensure(new Set(team.map(c=>c.uid)).size===team.length,'同一卡牌实例不能重复上阵');
   ensure(Number.isInteger(seed)&&seed>=0&&seed<=0xffffffff,'战斗种子不合法');
-  ensure(options&&typeof options==='object'&&!Array.isArray(options)&&Object.keys(options).every(key=>key==='enemyCount'),'对手配置不合法');
+  ensure(options&&typeof options==='object'&&!Array.isArray(options)&&Object.keys(options).every(key=>key==='enemyCount'||key==='enemyRank'||key==='enemyTeam'),'对手配置不合法');
   const enemyCount=options.enemyCount===undefined?team.length:options.enemyCount;
   ensure(Number.isInteger(enemyCount)&&enemyCount>=1&&enemyCount<=6,'敌方人数必须为 1–6');
+  // enemyRank / enemyTeam 仅供测试与平衡脚本固定敌阵；PvE 默认随机敌阵、品质取玩家平均四舍五入。
+  const rank=options.enemyRank===undefined?Math.round(team.reduce((sum,c)=>sum+c.rank,0)/team.length):options.enemyRank;
+  ensure(Number.isInteger(rank)&&rank>=1&&rank<=QUALITY_MAX,'敌方品质不合法');
   const positions=slots===undefined?DEFAULT_BATTLE_SLOTS.slice(0,team.length):slots;
-  ensure(Array.isArray(positions)&&positions.length===team.length&&new Set(positions).size===team.length&&Array.from(positions).every(slot=>Number.isInteger(slot)&&slot>=0&&slot<28),'站位必须与上阵人数相同且为不同的 0–27 格位');
-  const rng={rng:seed},pool=[...CARDS],enemies:BattleCard[]=[],rank=Math.round(team.reduce((sum,c)=>sum+c.rank,0)/team.length);
-  for(let index=0;index<enemyCount;index++){
+  ensure(Array.isArray(positions)&&positions.length===team.length&&new Set(positions).size===positions.length&&Array.from(positions).every(slot=>Number.isInteger(slot)&&slot>=0&&slot<28),'站位必须与上阵人数相同且为不同的 0–27 格位');
+  const rng={rng:seed},pool=[...CARDS],enemies:BattleCard[]=[];
+  if(options.enemyTeam!==undefined){
+    ensure(Array.isArray(options.enemyTeam)&&options.enemyTeam.length===enemyCount&&options.enemyTeam.every(card=>{try{checkCard(card);return true;}catch{return false;}}),'敌方阵容必须为 1–6 张合法卡牌');
+    ensure(new Set(options.enemyTeam.map(card=>card.defId)).size===options.enemyTeam.length,'敌方卡牌定义不能重复');
+    enemies.push(...options.enemyTeam.map(card=>({uid:'opponent-'+card.defId,defId:card.defId,rank:card.rank,best:0,stars:card.stars??1})));
+  }else for(let index=0;index<enemyCount;index++){
     const def=pool.splice(Math.floor(random(rng)*pool.length),1)[0];enemies.push({uid:'opponent-'+index,defId:def.id,rank,stars:1,best:0});
   }
   const frontWeight:Record<CombatRole,number>={坦克:5,战士:4,刺客:3,法师:2,射手:1};
   enemies.sort((a,b)=>frontWeight[getCombatStats(b).role]-frontWeight[getCombatStats(a).role]);
   const synergies={player:getSynergies(team),enemy:getSynergies(enemies)};
   const state:BattleState={
-    version:2,id:'battle-'+seed.toString(36)+'-'+fingerprint(team.map((c,i)=>c.uid+':'+c.defId+':'+c.rank+':'+(c.stars??1)+':'+positions[i]).join('|')+'|enemies:'+enemyCount),
+    version:3,id:'battle-hex3-'+seed.toString(36)+'-'+fingerprint(team.map((c,i)=>c.uid+':'+c.defId+':'+c.rank+':'+(c.stars??1)+':'+positions[i]).join('|')+'|enemies:'+enemyCount+(options.enemyTeam?':'+options.enemyTeam.map(c=>c.defId+':'+c.rank+':'+(c.stars??1)).join(','):'')),
     status:'playing',round:1,maxRounds:32,player:team.map((card,index)=>unit(card,'player-'+index,positions[index],'player',synergies.player)),
     enemy:enemies.map((card,index)=>unit(card,'enemy-'+index,DEFAULT_BATTLE_SLOTS[index],'enemy',synergies.enemy)),
     logs:[{id:1,round:1,side:'system',kind:'round',text:'战斗开始：进入射程才攻击，满 100 能量自动释放技能。'}],
@@ -283,7 +301,7 @@ export function createBattle(team:BattleCard[],seed:number,slots?:readonly numbe
   const result=simulate(state);state.frames=result.frames;state.outcome=result.outcome;state.reason=result.reason;return state;
 }
 export function actBattle(battle:BattleState,action:BattleAction):BattleState {
-  ensure(battle&&battle.version===2&&battle.status==='playing','本场战斗已结束或版本不兼容');
+  ensure(battle&&(battle.version===2||battle.version===3)&&battle.status==='playing','本场战斗已结束或版本不兼容');
   ensure(action&&typeof action==='object'&&action.type==='resolve'&&Object.keys(action).length===1,'只接受自动战斗结算指令');
   ensure(battle.frames.length>0&&battle.frames.length<=400&&(battle.outcome==='won'||battle.outcome==='lost'),'战斗回放不完整');
   const next=structuredClone(battle),last=next.frames.at(-1)!;

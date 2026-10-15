@@ -32,6 +32,59 @@ async function fixture(t,env={},remoteAddress) {
 const adminConfig={OPENAI_CLIENT_ID:CLIENT,ADMIN_OPENAI_SUBJECTS:ADMIN};
 function cookieHeader(response){return response.headers.getSetCookie().map(value=>value.split(';')[0]).join('; ');}
 
+test('HTTP：未拥有或未知卡种制作返回 400，拒绝不写资产、流水或幂等记录',async t=>{
+  const f=await fixture(t),account=f.login();
+  await f.request('/api/game',{cookie:account.cookie});
+  const before=f.store.db.prepare('SELECT state,revision FROM profiles WHERE user_id=?').get(account.user.id);
+  for(const [defId,code] of [['moon-deer','CARD_NOT_OWNED'],['not-a-card','CARD_UNKNOWN']]){
+    const response=await f.request('/api/game/craft',{method:'POST',cookie:account.cookie,
+      body:{requestId:'craft-rejected-'+defId,defId,paymentMode:'normal_only'}});
+    assert.equal(response.status,400);
+    assert.equal((await response.json()).code,code);
+    assert.deepEqual(f.store.db.prepare('SELECT state,revision FROM profiles WHERE user_id=?').get(account.user.id),before);
+    for(const table of ['operations','ledger'])assert.equal(f.store.db.prepare('SELECT count(*) n FROM '+table+' WHERE user_id=?').get(account.user.id).n,0);
+  }
+});
+
+test('game/duel HTTP 错误：未知异常为 500，合法业务错误保留状态，5xx 不泄露内部消息',async t=>{
+  const f=await fixture(t),account=f.login();
+  t.mock.method(console,'error',()=>{});
+  const cases=[
+    [new TypeError('private implementation detail'),500,'操作未完成，请稍后重试'],
+    [null,500,'操作未完成，请稍后重试'],
+    ...[0,200,600,400.5,'409',NaN].map(status=>[Object.assign(new Error('private detail'),{status,code:'INTERNAL_CODE'}),500,'操作未完成，请稍后重试']),
+    [Object.assign(new Error('请先完成当前对局'),{status:409,code:'ACTIVE_GAME_EXISTS'}),409,'请先完成当前对局'],
+    [Object.assign(new Error('private upstream detail'),{status:503,code:'INTERNAL_CODE'}),503,'操作未完成，请稍后重试'],
+  ];
+  for(const [error,status,message] of cases){
+    f.app.game.game=()=>{throw error;};f.app.duel.view=()=>{throw error;};
+    for(const [path,options] of [
+      ['/api/game/recycle',{method:'POST',body:{requestId:'http-error-fixture'}}],
+      ['/api/duel/error-fixture',{}],
+    ]){
+      const response=await f.request(path,{...options,cookie:account.cookie});
+      assert.equal(response.status,status,path);
+      const payload=await response.json();assert.equal(payload.error,message);
+      if(status>=500)assert.equal(payload.code,undefined,'内部错误码也不能外泄');
+      else assert.equal(payload.code,'ACTIVE_GAME_EXISTS');
+    }
+  }
+});
+
+test('HTTP：异常取消房间即使 JSON 损坏也可恢复为明确的零奖励终局',async t=>{
+  const f=await fixture(t),account=f.login(),room=f.app.duel.create(account.user);
+  f.store.db.prepare("UPDATE duel_rooms SET status='finished',phase='finished',phase_id='finished',finish_reason='tick_failure',finished_at=? WHERE id=?").run(Date.now(),room.roomId);
+  f.store.db.prepare("UPDATE duel_participants SET state='{bad json',loadout='{bad loadout' WHERE room_id=?").run(room.roomId);
+  const me=await(await f.request('/api/duel/me',{cookie:account.cookie})).json();
+  assert.equal(me.lastFinishedRoomId,room.roomId);
+  const response=await f.request('/api/duel/'+me.lastFinishedRoomId,{cookie:account.cookie});
+  assert.equal(response.status,200);
+  const view=await response.json();
+  assert.equal(view.room.finishReason,'tick_failure');assert.equal(view.room.outcome,null);
+  assert.deepEqual(view.self.reward,{base:0,factor:0,actualCoins:0,reason:'service_abort'});
+  assert.equal(view.currentBattle,null);
+});
+
 // 所有账号均通过内存仓库建立测试会话；本文件不测试、不冒充真实 OpenAI 登录成功。
 test('未登录不能读取管理后台',async t=>{
   const f=await fixture(t,adminConfig);const response=await f.request('/api/admin/summary');assert.equal(response.status,401);assert.match((await response.json()).error,/登录/);

@@ -1,8 +1,8 @@
 import {useEffect,useId,useMemo,useRef,useState} from 'react';
 import {createPortal} from 'react-dom';
 import {Check,Coins,Copy,Gift,Globe,LoaderCircle,MessageCircle,Plus,RefreshCw,Search,Send,ShoppingBag,Users,X} from 'lucide-react';
-import {AFFINITIES,CARD_MAP} from './data';
-import type {OwnedCard} from './engine';
+import {AFFINITIES,CARD_MAP,qualityName,QUALITY_TIERS} from './data';
+import type {OwnedCardV2 as OwnedCard} from './engine';
 import {getCombatStats} from './battle';
 import './community.css';
 
@@ -14,8 +14,8 @@ type RecentTrade={id:string;card:OwnedCard;price:number;closedAt:string};
 type MarketHistory={id:string;type:'buy'|'sell'|'cancel';card:OwnedCard;price:number;fee:number;at:string};
 type CardQuote={defId:string;rank:number;activeCount:number;lowestPrice:number|null;lastPrice:number|null;medianPrice7d:number|null;sales7d:number};
 type MarketSnapshot={listings:Listing[];mine:Listing[];page?:number;pageSize?:number;total?:number;feePercent?:number;stats?:{activeListings:number;sellers:number;trades24h:number;volume24h:number};quote?:{lowestPrice:number|null;medianPrice24h:number|null;lastPrice:number|null;sales24h:number};recentTrades?:RecentTrade[];history?:MarketHistory[];quotes?:CardQuote[]};
-type MarketFilters={search:string;affinity:string;role:string;rarity:string;rank:string;minPrice:string;maxPrice:string};
-const CLEAR_FILTERS:MarketFilters={search:'',affinity:'',role:'',rarity:'',rank:'',minPrice:'',maxPrice:''};
+type MarketFilters={search:string;affinity:string;role:string;rank:string;minPrice:string;maxPrice:string};
+const CLEAR_FILTERS:MarketFilters={search:'',affinity:'',role:'',rank:'',minPrice:'',maxPrice:''};
 export function selectCardQuote(snapshot:MarketSnapshot,card:OwnedCard|undefined){return card?snapshot.quotes?.find(quote=>quote.defId===card.defId&&quote.rank===card.rank):undefined;}
 export function marketQueryString(filters:MarketFilters,scope:string,sort:string,page:number){const params=new URLSearchParams();for(const [key,value] of Object.entries(filters)){const clean=value.trim();if(clean)params.set(key,clean);}params.set('scope',scope==='mine'?'mine':'all');params.set('sort',sort);params.set('page',String(scope==='history'?1:page));return params.toString();}
 type AccountMarketSnapshot={actor:string;value:MarketSnapshot};
@@ -29,10 +29,9 @@ type Confirmation={
   title:string;label:string;description:string;path:string;input:Record<string,unknown>;
   success:string;asset:boolean;card?:OwnedCard;details?:[string,string][];
 };
-export interface CommunityProps {userId:string;cards:OwnedCard[];coins:number;onRefresh:()=>void|Promise<void>}
+export interface CommunityProps {userId:string;cards:OwnedCard[];coins:number;restrictedCoins:number;onRefresh:()=>void|Promise<void>}
 
 const TABS=[{id:'market',name:'市场',Icon:ShoppingBag},{id:'gift',name:'赠送',Icon:Gift},{id:'friends',name:'好友',Icon:Users},{id:'chat',name:'聊天',Icon:MessageCircle}] as const;
-const RARITY_NAMES={R:'普通',SR:'稀有',SSR:'珍稀'};
 const number=(value:number)=>value.toLocaleString('zh-CN');
 const cardName=(card:OwnedCard)=>CARD_MAP[card.defId]?.name??'未知卡牌';
 const marketValue=(value:number|null|undefined)=>value==null?'—':number(value);
@@ -61,17 +60,17 @@ export async function communityRequest<T>(path:string,actorId:string,body?:Recor
 
 function CardPreview({card,compact=false}:{card:OwnedCard;compact?:boolean}){
   const def=CARD_MAP[card.defId];
-  return <div className={'community-card-preview'+(compact?' compact':'')} data-rarity={def?.rarity??'R'}>
+  return <div className={'community-card-preview'+(compact?' compact':'')}>
     {def?<img src={'/art/'+def.art+'.png'} alt="" loading="lazy"/>:<span className="community-card-placeholder">?</span>}
-    <span className="community-card-rarity">{def?.rarity} <small>{def&&RARITY_NAMES[def.rarity]}</small></span>
-    <span className="community-card-level">Lv.{card.rank}</span>
-    <div className="community-card-caption"><strong>{cardName(card)}</strong><span>{def?AFFINITIES[def.affinity].name+'系':''} <i>·</i> 强化等级 {card.rank}</span></div>
+    {card.transferPolicy==='starter_restricted'&&<span className="community-card-rarity">仅自用</span>}
+    <span className="community-card-level">{qualityName(card.rank)}</span>
+    <div className="community-card-caption"><strong>{cardName(card)}</strong><span>{def?AFFINITIES[def.affinity].name+'系':''} <i>·</i> {qualityName(card.rank)}品质</span></div>
   </div>;
 }
 function CardSelect({cards,value,onChange,id}:{cards:OwnedCard[];value:string;onChange:(value:string)=>void;id:string}){
   return <select id={id} value={value} onChange={event=>onChange(event.target.value)} disabled={!cards.length}>
     <option value="">选择一张卡牌</option>
-    {cards.map(card=><option key={card.uid} value={card.uid}>{cardName(card)} · Lv.{card.rank} · #{card.uid.slice(-6)}</option>)}
+    {cards.map(card=><option key={card.uid} value={card.uid}>{cardName(card)} · {qualityName(card.rank)}{card.transferPolicy==='starter_restricted'?' · 仅自用':''} · #{card.uid.slice(-6)}</option>)}
   </select>;
 }
 function MarketCardIdentity({card}:{card:OwnedCard}){const def=CARD_MAP[card.defId];return <div className="community-market-identity">{def&&<img src={'/art/'+def.art+'.png'} alt="" loading="lazy"/>}<span><strong>{cardName(card)}</strong><small>{def?AFFINITIES[def.affinity].name+'系':'—'} · {cardRole(card)}</small></span></div>;}
@@ -107,7 +106,7 @@ function ConfirmDialog({value,busy,error,onClose,onConfirm}:{value:Confirmation;
   </div>,document.body);
 }
 
-export function Community({userId,cards,coins,onRefresh}:CommunityProps){
+export function Community({userId,cards,coins,restrictedCoins,onRefresh}:CommunityProps){
   const [tab,setTab]=useState<CommunityTab>('market');
   const [social,setSocial]=useState<SocialSnapshot|null>(null);
   const [marketSnapshot,setMarketSnapshot]=useState<AccountMarketSnapshot|null>(null);
@@ -132,6 +131,8 @@ export function Community({userId,cards,coins,onRefresh}:CommunityProps){
   const messages=selectChatMessages(chatSnapshot,userId,channel);
   const draft=drafts[channel]??'';
   const available=useMemo(()=>[...cards].sort((a,b)=>cardName(a).localeCompare(cardName(b),'zh-CN')||b.rank-a.rank||a.uid.localeCompare(b.uid)),[cards]);
+  const tradable=useMemo(()=>available.filter(card=>card.transferPolicy!=='starter_restricted'),[available]);
+  const spendable=Math.max(0,coins-restrictedCoins);
   const listingCard=cards.find(card=>card.uid===listingUid);
   const giftCard=cards.find(card=>card.uid===giftUid);
   const priceValue=Number(price);const validPrice=/^\d+$/.test(price)&&Number.isSafeInteger(priceValue)&&priceValue>=10&&priceValue<=100000;
@@ -206,19 +207,21 @@ export function Community({userId,cards,coins,onRefresh}:CommunityProps){
     finally{end();}
   }
   function buy(listing:Listing){
-    openConfirmation({title:'购买这张卡牌？',label:'确认购买',description:'付款后，卡牌会直接进入你的背包。',path:'/api/market/buy',input:{listingId:listing.id,requestId:requestId()},success:'购买成功，卡牌已进入背包',asset:true,card:listing.card,details:[['卖家',listing.sellerName],['支付',number(listing.price)+' 星币'],['购买后余额',number(coins-listing.price)+' 星币']]});
+    openConfirmation({title:'购买这张卡牌？',label:'确认购买',description:'付款后，卡牌会直接进入你的背包。',path:'/api/market/buy',input:{listingId:listing.id,requestId:requestId()},success:'购买成功，卡牌已进入背包',asset:true,card:listing.card,details:[['卖家',listing.sellerName],['支付',number(listing.price)+' 星币（仅普通额度）'],['购买后可用余额',number(spendable-listing.price)+' 星币']]});
   }
   function cancel(listing:Listing){
-    openConfirmation({title:'撤下这张卡牌？',label:'确认撤单',description:'卡牌会按当前等级返回你的背包，不收取手续费。',path:'/api/market/cancel',input:{listingId:listing.id,requestId:requestId()},success:'已撤单，卡牌已返回背包',asset:true,card:listing.card});
+    openConfirmation({title:'撤下这张卡牌？',label:'确认撤单',description:'卡牌会按当前品质返回你的背包，不收取手续费。',path:'/api/market/cancel',input:{listingId:listing.id,requestId:requestId()},success:'已撤单，卡牌已返回背包',asset:true,card:listing.card});
   }
   function listCard(){
     if(!listingCard||!validPrice)return;
-    openConfirmation({title:'上架这张卡牌？',label:'确认上架',description:'上架后由市场保管，售出前可以撤单。',path:'/api/market/list',input:{uid:listingCard.uid,price:priceValue,requestId:requestId()},success:'上架成功，卡牌已交给市场保管',asset:true,card:listingCard,details:[['售价',number(priceValue)+' 星币'],['成交手续费',number(Math.floor(priceValue*.05))+' 星币'],['售出后到账',number(priceValue-Math.floor(priceValue*.05))+' 星币']]});
+    if(listingCard.transferPolicy==='starter_restricted'){setError('新手赠送来源的卡仅可自用，不能上架交易');return;}
+    openConfirmation({title:'上架这张卡牌？',label:'确认上架',description:'上架后由市场保管，售出前可以撤单。',path:'/api/market/list',input:{uid:listingCard.uid,price:priceValue,requestId:requestId()},success:'上架成功，卡牌已交给市场保管',asset:true,card:listingCard,details:[['售价',number(priceValue)+' 星币'],['成交手续费（5% 向上取整，至少 1）',number(Math.max(1,Math.ceil(priceValue*.05)))+' 星币'],['售出后到账',number(priceValue-Math.max(1,Math.ceil(priceValue*.05)))+' 星币']]});
   }
   function gift(){
     const code=giftCode.trim().toUpperCase();if(!giftCard||!/^AST-[A-F0-9]{8}$/.test(code))return;
+    if(giftCard.transferPolicy==='starter_restricted'){setError('新手赠送来源的卡仅可自用，不能赠送');return;}
     const target=ownSocial?.friends.find(friend=>friend.code===code);
-    openConfirmation({title:'确认赠送？',label:'确认送出',description:'赠送成功后不能撤回，请核对好友码。卡牌的强化等级会保留。',path:'/api/market/gift',input:{uid:giftCard.uid,toCode:code,requestId:requestId()},success:'赠送成功，卡牌已送到对方背包',asset:true,card:giftCard,details:[['接收玩家',target?.name??'以好友码为准'],['好友码',code]]});
+    openConfirmation({title:'确认赠送？',label:'确认送出',description:'赠送成功后不能撤回，请核对好友码。卡牌的品质会保留。',path:'/api/market/gift',input:{uid:giftCard.uid,toCode:code,requestId:requestId()},success:'赠送成功，卡牌已送到对方背包',asset:true,card:giftCard,details:[['接收玩家',target?.name??'以好友码为准'],['好友码',code]]});
   }
   function removeFriend(friend:Person){openConfirmation({title:'移除这位好友？',label:'移除好友',description:'移除后，双方将无法继续私聊。',path:'/api/social/friend.remove',input:{userId:friend.id},success:'已移除好友',asset:false,details:[['玩家',friend.name],['好友码',friend.code]]});}
   function chatWith(friend:Person){setChannel(friend.id);changeTab('chat');}
@@ -252,15 +255,14 @@ export function Community({userId,cards,coins,onRefresh}:CommunityProps){
             <button aria-pressed={scope==='all'} className={scope==='all'?'active':''} onClick={()=>changeScope('all')}>全部挂单</button>
             <button aria-pressed={scope==='mine'} className={scope==='mine'?'active':''} onClick={()=>changeScope('mine')}>我的挂单 <span>{market.mine.length}/20</span></button>
             <button aria-pressed={scope==='history'} className={scope==='history'?'active':''} onClick={()=>changeScope('history')}>成交记录</button>
-          </div><span className="community-balance" title="我的星币余额"><Coins size={16}/>{number(coins)}</span></div>
+          </div><span className="community-balance" title={'星币 '+number(coins)+(restrictedCoins>0?'，其中 '+number(restrictedCoins)+' 为新手赠送额度（仅可自用，不能购买玩家挂单）':'')}><Coins size={16}/>{number(coins)}</span></div>
 
           {scope!=='history'&&<>
             <div className="community-market-filters" aria-label="市场筛选">
               <label className="community-search market-name"><Search size={15}/><input aria-label="搜索市场卡牌" maxLength={80} placeholder="搜索卡牌名称" value={filters.search} onChange={event=>filterChange('search',event.target.value)}/></label>
               <select aria-label="筛选属性" value={filters.affinity} onChange={event=>filterChange('affinity',event.target.value)}><option value="">全部属性</option><option value="moon">月系</option><option value="sun">日系</option><option value="forest">森系</option></select>
               <select aria-label="筛选职业" value={filters.role} onChange={event=>filterChange('role',event.target.value)}><option value="">全部职业</option>{['坦克','战士','射手','法师','刺客'].map(role=><option key={role} value={role}>{role}</option>)}</select>
-              <select aria-label="筛选稀有度" value={filters.rarity} onChange={event=>filterChange('rarity',event.target.value)}><option value="">全部稀有度</option><option value="R">R · 普通</option><option value="SR">SR · 稀有</option><option value="SSR">SSR · 珍稀</option></select>
-              <select aria-label="筛选强化等级" value={filters.rank} onChange={event=>filterChange('rank',event.target.value)}><option value="">全部等级</option><option value="1">Lv.1</option><option value="2">Lv.2</option><option value="3">Lv.3</option></select>
+              <select aria-label="筛选强化等级" value={filters.rank} onChange={event=>filterChange('rank',event.target.value)}><option value="">全部品质</option>{QUALITY_TIERS.map(tier=><option key={tier.level} value={String(tier.level)}>{tier.name}（Q{tier.level}）</option>)}</select>
               <label className="community-price-range"><span className="community-sr-only">最低价格</span><input aria-label="最低价格" inputMode="numeric" type="number" min="0" max="100000" placeholder="最低价" value={filters.minPrice} onChange={event=>filterChange('minPrice',event.target.value)}/><i>—</i><input aria-label="最高价格" inputMode="numeric" type="number" min="0" max="100000" placeholder="最高价" value={filters.maxPrice} onChange={event=>filterChange('maxPrice',event.target.value)}/></label>
               <button className="community-button subtle" onClick={()=>{setFilters(CLEAR_FILTERS);setPage(1);}} disabled={!filterCount}>清空筛选{filterCount?' · '+filterCount:''}</button>
             </div>
@@ -270,25 +272,25 @@ export function Community({userId,cards,coins,onRefresh}:CommunityProps){
           </>}
           <div className="community-market-results">
             <span>{scope==='history'?'个人最近 30 条交易 / 撤单记录':loading?'正在更新…':'共 '+number(total)+' 条挂单'}</span>
-            {scope!=='history'&&<div><select aria-label="市场排序" value={sort} onChange={event=>{setSort(event.target.value);setPage(1);}}><option value="newest">最新上架</option><option value="oldest">挂牌最久</option><option value="low">价格从低到高</option><option value="high">价格从高到低</option><option value="level">等级从高到低</option></select><div className="community-view-switch" aria-label="展示方式"><button aria-pressed={marketView==='list'} className={marketView==='list'?'active':''} onClick={()=>setMarketView('list')}>列表</button><button aria-pressed={marketView==='cards'} className={marketView==='cards'?'active':''} onClick={()=>setMarketView('cards')}>卡片</button></div></div>}
+            {scope!=='history'&&<div><select aria-label="市场排序" value={sort} onChange={event=>{setSort(event.target.value);setPage(1);}}><option value="newest">最新上架</option><option value="oldest">挂牌最久</option><option value="low">价格从低到高</option><option value="high">价格从高到低</option><option value="level">品质从高到低</option></select><div className="community-view-switch" aria-label="展示方式"><button aria-pressed={marketView==='list'} className={marketView==='list'?'active':''} onClick={()=>setMarketView('list')}>列表</button><button aria-pressed={marketView==='cards'} className={marketView==='cards'?'active':''} onClick={()=>setMarketView('cards')}>卡片</button></div></div>}
           </div>
           {scope==='mine'&&<p className="community-hint">挂单由市场保管，撤单后返回背包；只有成交才收取 5% 卖家手续费。</p>}
 
-          {scope==='history'?(historyPage.length?<div className="community-table-scroll" tabIndex={0}><table className="community-market-table"><caption className="community-sr-only">我的成交和撤单记录</caption><thead><tr><th>卡牌</th><th>类型</th><th>等级</th><th className="numeric">成交价</th><th className="numeric">手续费</th><th>时间</th></tr></thead><tbody>{historyPage.map(entry=><tr key={entry.id}><td><MarketCardIdentity card={entry.card}/></td><td><span className={'community-trade-kind '+entry.type}>{entry.type==='buy'?'买入':entry.type==='sell'?'卖出':'撤单'}</span></td><td><span className="community-table-level">Lv.{entry.card.rank}</span></td><td className="numeric"><strong>{entry.type==='cancel'?'—':number(entry.price)}</strong></td><td className="numeric">{entry.type==='sell'?number(entry.fee):'—'}</td><td className="community-table-time">{marketTime(entry.at)}</td></tr>)}</tbody></table></div>:<div className="community-empty"><ShoppingBag size={30}/><h3>还没有成交记录</h3><p>你的买入、卖出与撤单记录会显示在这里。</p></div>):listings.length?marketView==='list'?<div className="community-table-scroll" tabIndex={0} aria-busy={loading}><table className="community-market-table"><caption className="community-sr-only">{scope==='mine'?'我的在售卡牌':'市场在售卡牌'}</caption><thead><tr><th>卡牌 / 属性 / 职业</th><th>稀有度</th><th>等级</th><th>卖家</th><th className="numeric">售价</th><th>挂牌时间</th><th className="action">操作</th></tr></thead><tbody>{listings.map(listing=><tr key={listing.id}><td><MarketCardIdentity card={listing.card}/></td><td><span className="community-table-rarity" data-rarity={CARD_MAP[listing.card.defId]?.rarity}>{CARD_MAP[listing.card.defId]?.rarity??'—'}</span></td><td><span className="community-table-level">Lv.{listing.card.rank}</span></td><td><span className="community-table-seller" title={listing.sellerName}>{listing.sellerId===userId?'我 · ':''}{listing.sellerName}</span></td><td className="numeric"><strong className="community-table-price">{number(listing.price)}</strong></td><td className="community-table-time">{marketTime(listing.createdAt)}</td><td className="action">{listing.sellerId===userId?<button className="community-button small" onClick={()=>cancel(listing)} disabled={busy}>撤单</button>:<button className="community-button primary small" disabled={busy||coins<listing.price} onClick={()=>buy(listing)}>{coins<listing.price?'余额不足':'买入'}</button>}</td></tr>)}</tbody></table></div>:<div className="community-listings compact-market" aria-busy={loading}>{listings.map(listing=><article className="community-listing" key={listing.id}><CardPreview card={listing.card}/><div className="community-listing-info"><p className="community-seller">卖家 <strong title={listing.sellerName}>{listing.sellerName}</strong>{listing.sellerId===userId&&<small>我</small>}</p><div className="community-card-market-meta"><span>{cardRole(listing.card)}</span><time>{marketTime(listing.createdAt)}</time></div><div className="community-listing-bottom"><span className="community-price"><Coins size={15}/>{number(listing.price)}</span>{listing.sellerId===userId?<button className="community-button small" onClick={()=>cancel(listing)} disabled={busy}>撤单</button>:<button className="community-button primary small" disabled={busy||coins<listing.price} onClick={()=>buy(listing)}>{coins<listing.price?'余额不足':'买入'}</button>}</div></div></article>)}</div>:<div className="community-empty"><ShoppingBag size={30}/><h3>{loading?'正在读取市场…':filterCount?'没有符合条件的挂单':'还没有挂单'}</h3><p>{filterCount?'试试放宽筛选条件。':scope==='mine'?'选择一张卡牌，设置价格后上架。':'上架你的卡牌，等待其他玩家购买。'}</p>{!!filterCount&&<button className="community-button" onClick={()=>{setFilters(CLEAR_FILTERS);setPage(1);}}>清空筛选</button>}</div>}
+          {scope==='history'?(historyPage.length?<div className="community-table-scroll" tabIndex={0}><table className="community-market-table"><caption className="community-sr-only">我的成交和撤单记录</caption><thead><tr><th>卡牌</th><th>类型</th><th>品质</th><th className="numeric">成交价</th><th className="numeric">手续费</th><th>时间</th></tr></thead><tbody>{historyPage.map(entry=><tr key={entry.id}><td><MarketCardIdentity card={entry.card}/></td><td><span className={'community-trade-kind '+entry.type}>{entry.type==='buy'?'买入':entry.type==='sell'?'卖出':'撤单'}</span></td><td><span className="community-table-level">{qualityName(entry.card.rank)}</span></td><td className="numeric"><strong>{entry.type==='cancel'?'—':number(entry.price)}</strong></td><td className="numeric">{entry.type==='sell'?number(entry.fee):'—'}</td><td className="community-table-time">{marketTime(entry.at)}</td></tr>)}</tbody></table></div>:<div className="community-empty"><ShoppingBag size={30}/><h3>还没有成交记录</h3><p>你的买入、卖出与撤单记录会显示在这里。</p></div>):listings.length?marketView==='list'?<div className="community-table-scroll" tabIndex={0} aria-busy={loading}><table className="community-market-table"><caption className="community-sr-only">{scope==='mine'?'我的在售卡牌':'市场在售卡牌'}</caption><thead><tr><th>卡牌 / 属性 / 职业</th><th>品质</th><th>卖家</th><th className="numeric">售价</th><th>挂牌时间</th><th className="action">操作</th></tr></thead><tbody>{listings.map(listing=><tr key={listing.id}><td><MarketCardIdentity card={listing.card}/></td><td><span className="community-table-level">{qualityName(listing.card.rank)}</span></td><td><span className="community-table-seller" title={listing.sellerName}>{listing.sellerId===userId?'我 · ':''}{listing.sellerName}</span></td><td className="numeric"><strong className="community-table-price">{number(listing.price)}</strong></td><td className="community-table-time">{marketTime(listing.createdAt)}</td><td className="action">{listing.sellerId===userId?<button className="community-button small" onClick={()=>cancel(listing)} disabled={busy}>撤单</button>:<button className="community-button primary small" disabled={busy||spendable<listing.price} onClick={()=>buy(listing)}>{spendable<listing.price?'交易余额不足':'买入'}</button>}</td></tr>)}</tbody></table></div>:<div className="community-listings compact-market" aria-busy={loading}>{listings.map(listing=><article className="community-listing" key={listing.id}><CardPreview card={listing.card}/><div className="community-listing-info"><p className="community-seller">卖家 <strong title={listing.sellerName}>{listing.sellerName}</strong>{listing.sellerId===userId&&<small>我</small>}</p><div className="community-card-market-meta"><span>{cardRole(listing.card)}</span><time>{marketTime(listing.createdAt)}</time></div><div className="community-listing-bottom"><span className="community-price"><Coins size={15}/>{number(listing.price)}</span>{listing.sellerId===userId?<button className="community-button small" onClick={()=>cancel(listing)} disabled={busy}>撤单</button>:<button className="community-button primary small" disabled={busy||spendable<listing.price} onClick={()=>buy(listing)}>{spendable<listing.price?'交易余额不足':'买入'}</button>}</div></div></article>)}</div>:<div className="community-empty"><ShoppingBag size={30}/><h3>{loading?'正在读取市场…':filterCount?'没有符合条件的挂单':'还没有挂单'}</h3><p>{filterCount?'试试放宽筛选条件。':scope==='mine'?'选择一张卡牌，设置价格后上架。':'上架你的卡牌，等待其他玩家购买。'}</p>{!!filterCount&&<button className="community-button" onClick={()=>{setFilters(CLEAR_FILTERS);setPage(1);}}>清空筛选</button>}</div>}
 
           <div className="community-pagination" aria-label="市场分页"><span>{number(total)} 条{scope==='history'?'记录':'结果'} · 每页 {pageSize} 条</span><div><button className="community-button small" disabled={loading||currentPage<=1} onClick={()=>setPage(currentPage-1)}>上一页</button><span>{currentPage} / {pages}</span><button className="community-button small" disabled={loading||currentPage>=pages} onClick={()=>setPage(currentPage+1)}>下一页</button></div></div>
-          {scope!=='history'&&<section className="community-recent-trades"><div><h3>最近成交</h3><span>匹配当前卡牌筛选，不受价格区间限制</span></div>{market.recentTrades?.length?<div className="community-recent-trade-list">{market.recentTrades.slice(0,5).map(trade=><div key={trade.id}><span>{cardName(trade.card)} <small>Lv.{trade.card.rank}</small></span><strong>{number(trade.price)} <small>星币</small></strong><time>{marketTime(trade.closedAt)}</time></div>)}</div>:<p>暂无匹配的成交数据</p>}</section>}
+          {scope!=='history'&&<section className="community-recent-trades"><div><h3>最近成交</h3><span>匹配当前卡牌筛选，不受价格区间限制</span></div>{market.recentTrades?.length?<div className="community-recent-trade-list">{market.recentTrades.slice(0,5).map(trade=><div key={trade.id}><span>{cardName(trade.card)} <small>{qualityName(trade.card.rank)}</small></span><strong>{number(trade.price)} <small>星币</small></strong><time>{marketTime(trade.closedAt)}</time></div>)}</div>:<p>暂无匹配的成交数据</p>}</section>}
           <p className="community-hint community-market-footnote">每 3 秒同步服务器。报价只来自真实挂单和成交，无记录时显示「—」。</p>
         </div>
 
         <aside className="community-trade-form">
           <div className="community-sell-heading"><h2>卖出卡牌</h2><span>{market.mine.length} / 20 挂单</span></div>
-          <p className="community-hint">选卡、参考行情，再设置你的价格。</p>
+          <p className="community-hint">选卡、参考行情，再设置你的价格。新手赠送来源的卡仅可自用，不能上架。</p>
           <form onSubmit={event=>{event.preventDefault();listCard();}}>
-            <label htmlFor={prefix+'-list-card'}>选择卡牌</label><CardSelect cards={available} value={listingUid} onChange={setListingUid} id={prefix+'-list-card'}/>
-            {listingCard&&<><CardPreview card={listingCard} compact/><section className="community-sell-quote" aria-label="同卡同等级行情"><h3>同卡 · 同等级行情 <small>Lv.{listingCard.rank}</small></h3><dl><div><dt>在售数量</dt><dd>{selectedQuote?number(selectedQuote.activeCount):'—'}</dd></div><div><dt>最低挂牌</dt><dd>{marketValue(selectedQuote?.lowestPrice)}</dd></div><div><dt>最近成交</dt><dd>{marketValue(selectedQuote?.lastPrice)}</dd></div><div><dt>7 天成交中位价</dt><dd>{marketValue(selectedQuote?.medianPrice7d)}</dd></div><div><dt>7 天成交笔数</dt><dd>{selectedQuote?number(selectedQuote.sales7d):'—'}</dd></div></dl>{!selectedQuote&&<p>这张卡暂时没有报价或成交记录。</p>}{selectedQuote?.lowestPrice!=null&&<button type="button" className="community-button subtle small" onClick={()=>setPrice(String(selectedQuote.lowestPrice))}>按最低挂牌价填入</button>}</section></>}
+            <label htmlFor={prefix+'-list-card'}>选择卡牌</label><CardSelect cards={tradable} value={listingUid} onChange={setListingUid} id={prefix+'-list-card'}/>
+            {listingCard&&<><CardPreview card={listingCard} compact/><section className="community-sell-quote" aria-label="同卡同等级行情"><h3>同卡 · 同品质行情 <small>{qualityName(listingCard.rank)}（Q{listingCard.rank}）</small></h3><dl><div><dt>在售数量</dt><dd>{selectedQuote?number(selectedQuote.activeCount):'—'}</dd></div><div><dt>最低挂牌</dt><dd>{marketValue(selectedQuote?.lowestPrice)}</dd></div><div><dt>最近成交</dt><dd>{marketValue(selectedQuote?.lastPrice)}</dd></div><div><dt>7 天成交中位价</dt><dd>{marketValue(selectedQuote?.medianPrice7d)}</dd></div><div><dt>7 天成交笔数</dt><dd>{selectedQuote?number(selectedQuote.sales7d):'—'}</dd></div></dl>{!selectedQuote&&<p>这张卡暂时没有报价或成交记录。</p>}{selectedQuote?.lowestPrice!=null&&<button type="button" className="community-button subtle small" onClick={()=>setPrice(String(selectedQuote.lowestPrice))}>按最低挂牌价填入</button>}</section></>}
             <label htmlFor={prefix+'-price'}>售价 <span>10–100,000 星币</span></label><div className="community-price-input"><Coins size={17}/><input id={prefix+'-price'} type="number" min="10" max="100000" step="1" inputMode="numeric" required value={price} onChange={event=>setPrice(event.target.value)}/></div>
-            <div className="community-sell-fees"><span>卖家手续费（5%）<b>{validPrice?number(Math.floor(priceValue*.05)):'—'}</b></span><span>预计净到账<strong>{validPrice?number(priceValue-Math.floor(priceValue*.05)):'—'} <small>星币</small></strong></span></div>
+            <div className="community-sell-fees"><span>卖家手续费（5% 向上取整，至少 1）<b>{validPrice?number(Math.max(1,Math.ceil(priceValue*.05))):'—'}</b></span><span>预计净到账<strong>{validPrice?number(priceValue-Math.max(1,Math.ceil(priceValue*.05))):'—'} <small>星币</small></strong></span></div>
             <button className="community-button primary full" type="submit" disabled={busy||!listingCard||!validPrice||market.mine.length>=20}><Plus size={16}/>{market.mine.length>=20?'已达到 20 条挂单上限':'确认上架'}</button>
             <p className="community-hint">{cards.length?'上架后卡牌由市场保管；出售永久卡，不影响本局已招募的副本。':'背包里还没有可出售的卡牌。'}</p>
           </form>
@@ -297,12 +299,12 @@ export function Community({userId,cards,coins,onRefresh}:CommunityProps){
     </>}
 
     {tab==='gift'&&<div className="community-gift-layout">
-      <div className="community-gift-preview">{giftCard?<CardPreview card={giftCard}/>:<><Gift size={56}/><h2>送一张卡给朋友</h2><p>等级保留，直接到达对方背包。</p></>}</div>
+      <div className="community-gift-preview">{giftCard?<CardPreview card={giftCard}/>:<><Gift size={56}/><h2>送一张卡给朋友</h2><p>品质保留，直接到达对方背包。</p></>}</div>
       <form className="community-gift-form" onSubmit={event=>{event.preventDefault();gift();}}>
-        <h2>赠送卡牌</h2><label htmlFor={prefix+'-gift-card'}>送出哪张卡？</label><CardSelect cards={available} value={giftUid} onChange={setGiftUid} id={prefix+'-gift-card'}/>
+        <h2>赠送卡牌</h2><label htmlFor={prefix+'-gift-card'}>送出哪张卡？</label><CardSelect cards={tradable} value={giftUid} onChange={setGiftUid} id={prefix+'-gift-card'}/>
         {!!ownSocial?.friends.length&&<><label htmlFor={prefix+'-gift-friend'}>从好友中选择</label><select id={prefix+'-gift-friend'} value={ownSocial.friends.some(friend=>friend.code===giftCode)?giftCode:''} onChange={event=>setGiftCode(event.target.value)}><option value="">选择好友，或直接输入好友码</option>{ownSocial.friends.map(friend=><option key={friend.id} value={friend.code}>{friend.name} · {friend.code}</option>)}</select></>}
         <label htmlFor={prefix+'-gift-code'}>对方好友码</label><input id={prefix+'-gift-code'} placeholder="AST-XXXXXXXX" autoCapitalize="characters" autoComplete="off" spellCheck={false} maxLength={12} required value={giftCode} onChange={event=>setGiftCode(event.target.value.toUpperCase())}/>
-        <p className="community-hint">赠送不能撤回。最后一张和强化卡也可送出；本局已招募的副本不受影响。</p>
+        <p className="community-hint">赠送不能撤回。新手赠送来源的卡仅可自用，不能赠送；本局已招募的副本不受影响。</p>
         <button className="community-button primary full" type="submit" disabled={busy||!giftCard||!/^AST-[A-F0-9]{8}$/.test(giftCode.trim())||giftCode.trim()===ownSocial?.self.code}><Gift size={16}/>核对并赠送</button>
         {!cards.length&&<p className="community-hint">背包里还没有可以赠送的卡牌。</p>}
       </form>

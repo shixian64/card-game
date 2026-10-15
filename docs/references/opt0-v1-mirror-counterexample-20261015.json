@@ -1,0 +1,326 @@
+{
+  "note": "v1 已知换边反例；交换双方阵容并翻转先手奇偶后，归一化胜负仍不同。O0 仅记录，不改规则。",
+  "left": "moon_shield",
+  "right": "moon_shield",
+  "positionIndex": 5,
+  "cases": [
+    {
+      "input": {
+        "roundNumber": 8,
+        "combatSeed": 0,
+        "sideA": {
+          "units": [
+            {
+              "unitId": "u0",
+              "defId": "moon-deer",
+              "quality": 3,
+              "stars": 1,
+              "itemDefIds": []
+            },
+            {
+              "unitId": "u1",
+              "defId": "sun-cub",
+              "quality": 3,
+              "stars": 1,
+              "itemDefIds": []
+            },
+            {
+              "unitId": "u2",
+              "defId": "star-deer",
+              "quality": 3,
+              "stars": 1,
+              "itemDefIds": []
+            },
+            {
+              "unitId": "u3",
+              "defId": "moon-fawn",
+              "quality": 3,
+              "stars": 1,
+              "itemDefIds": []
+            },
+            {
+              "unitId": "u4",
+              "defId": "mist-deer",
+              "quality": 3,
+              "stars": 1,
+              "itemDefIds": []
+            },
+            {
+              "unitId": "u5",
+              "defId": "sun-fox",
+              "quality": 3,
+              "stars": 1,
+              "itemDefIds": []
+            }
+          ],
+          "formation": [
+            {
+              "unitId": "u0",
+              "localSlot": 2
+            },
+            {
+              "unitId": "u1",
+              "localSlot": 24
+            },
+            {
+              "unitId": "u2",
+              "localSlot": 23
+            },
+            {
+              "unitId": "u3",
+              "localSlot": 16
+            },
+            {
+              "unitId": "u4",
+              "localSlot": 22
+            },
+            {
+              "unitId": "u5",
+              "localSlot": 9
+            }
+          ]
+        },
+        "sideB": {
+          "units": [
+            {
+              "unitId": "u0",
+              "defId": "moon-deer",
+              "quality": 3,
+              "stars": 1,
+              "itemDefIds": []
+            },
+            {
+              "unitId": "u1",
+              "defId": "sun-cub",
+              "quality": 3,
+              "stars": 1,
+              "itemDefIds": []
+            },
+            {
+              "unitId": "u2",
+              "defId": "star-deer",
+              "quality": 3,
+              "stars": 1,
+              "itemDefIds": []
+            },
+            {
+              "unitId": "u3",
+              "defId": "moon-fawn",
+              "quality": 3,
+              "stars": 1,
+              "itemDefIds": []
+            },
+            {
+              "unitId": "u4",
+              "defId": "mist-deer",
+              "quality": 3,
+              "stars": 1,
+              "itemDefIds": []
+            },
+            {
+              "unitId": "u5",
+              "defId": "sun-fox",
+              "quality": 3,
+              "stars": 1,
+              "itemDefIds": []
+            }
+          ],
+          "formation": [
+            {
+              "unitId": "u0",
+              "localSlot": 0
+            },
+            {
+              "unitId": "u1",
+              "localSlot": 16
+            },
+            {
+              "unitId": "u2",
+              "localSlot": 11
+            },
+            {
+              "unitId": "u3",
+              "localSlot": 6
+            },
+            {
+              "unitId": "u4",
+              "localSlot": 10
+            },
+            {
+              "unitId": "u5",
+              "localSlot": 26
+            }
+          ]
+        }
+      },
+      "swapped": false,
+      "winner": "A",
+      "normalizedWinner": "left",
+      "summary": {
+        "rounds": 17,
+        "frames": 149,
+        "hpRatioA": 0.48774795799299886,
+        "hpRatioB": 0
+      }
+    },
+    {
+      "input": {
+        "roundNumber": 8,
+        "combatSeed": 1,
+        "sideA": {
+          "units": [
+            {
+              "unitId": "u0",
+              "defId": "moon-deer",
+              "quality": 3,
+              "stars": 1,
+              "itemDefIds": []
+            },
+            {
+              "unitId": "u1",
+              "defId": "sun-cub",
+              "quality": 3,
+              "stars": 1,
+              "itemDefIds": []
+            },
+            {
+              "unitId": "u2",
+              "defId": "star-deer",
+              "quality": 3,
+              "stars": 1,
+              "itemDefIds": []
+            },
+            {
+              "unitId": "u3",
+              "defId": "moon-fawn",
+              "quality": 3,
+              "stars": 1,
+              "itemDefIds": []
+            },
+            {
+              "unitId": "u4",
+              "defId": "mist-deer",
+              "quality": 3,
+              "stars": 1,
+              "itemDefIds": []
+            },
+            {
+              "unitId": "u5",
+              "defId": "sun-fox",
+              "quality": 3,
+              "stars": 1,
+              "itemDefIds": []
+            }
+          ],
+          "formation": [
+            {
+              "unitId": "u0",
+              "localSlot": 0
+            },
+            {
+              "unitId": "u1",
+              "localSlot": 16
+            },
+            {
+              "unitId": "u2",
+              "localSlot": 11
+            },
+            {
+              "unitId": "u3",
+              "localSlot": 6
+            },
+            {
+              "unitId": "u4",
+              "localSlot": 10
+            },
+            {
+              "unitId": "u5",
+              "localSlot": 26
+            }
+          ]
+        },
+        "sideB": {
+          "units": [
+            {
+              "unitId": "u0",
+              "defId": "moon-deer",
+              "quality": 3,
+              "stars": 1,
+              "itemDefIds": []
+            },
+            {
+              "unitId": "u1",
+              "defId": "sun-cub",
+              "quality": 3,
+              "stars": 1,
+              "itemDefIds": []
+            },
+            {
+              "unitId": "u2",
+              "defId": "star-deer",
+              "quality": 3,
+              "stars": 1,
+              "itemDefIds": []
+            },
+            {
+              "unitId": "u3",
+              "defId": "moon-fawn",
+              "quality": 3,
+              "stars": 1,
+              "itemDefIds": []
+            },
+            {
+              "unitId": "u4",
+              "defId": "mist-deer",
+              "quality": 3,
+              "stars": 1,
+              "itemDefIds": []
+            },
+            {
+              "unitId": "u5",
+              "defId": "sun-fox",
+              "quality": 3,
+              "stars": 1,
+              "itemDefIds": []
+            }
+          ],
+          "formation": [
+            {
+              "unitId": "u0",
+              "localSlot": 2
+            },
+            {
+              "unitId": "u1",
+              "localSlot": 24
+            },
+            {
+              "unitId": "u2",
+              "localSlot": 23
+            },
+            {
+              "unitId": "u3",
+              "localSlot": 16
+            },
+            {
+              "unitId": "u4",
+              "localSlot": 22
+            },
+            {
+              "unitId": "u5",
+              "localSlot": 9
+            }
+          ]
+        }
+      },
+      "swapped": true,
+      "winner": "A",
+      "normalizedWinner": "right",
+      "summary": {
+        "rounds": 20,
+        "frames": 166,
+        "hpRatioA": 0.15752625437572929,
+        "hpRatioB": 0
+      }
+    }
+  ]
+}

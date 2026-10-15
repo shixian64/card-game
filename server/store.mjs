@@ -12,15 +12,19 @@ export function openStore(path) {
     CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY, issuer TEXT NOT NULL, client_id TEXT NOT NULL, subject TEXT NOT NULL, name TEXT NOT NULL, created_at INTEGER NOT NULL, last_login INTEGER NOT NULL, UNIQUE(issuer,client_id,subject));
     CREATE TABLE IF NOT EXISTS sessions(token_hash TEXT PRIMARY KEY,user_id TEXT NOT NULL REFERENCES users(id),expires_at INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS transactions(token_hash TEXT PRIMARY KEY,state TEXT NOT NULL,verifier TEXT NOT NULL,nonce TEXT NOT NULL,expires_at INTEGER NOT NULL);
+    CREATE TABLE IF NOT EXISTS linuxdo_transactions(token_hash TEXT PRIMARY KEY,state TEXT NOT NULL,verifier TEXT NOT NULL,nonce TEXT NOT NULL,client_id TEXT NOT NULL,redirect_uri TEXT NOT NULL,expires_at INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS events(id TEXT PRIMARY KEY,visitor TEXT NOT NULL,user_id TEXT,kind TEXT NOT NULL,data TEXT NOT NULL,created_at INTEGER NOT NULL,dev INTEGER NOT NULL DEFAULT 0);
     CREATE INDEX IF NOT EXISTS event_time ON events(created_at);
     CREATE INDEX IF NOT EXISTS event_kind ON events(kind,created_at);
   `);
   return {
     db,
-    clean() {const now=Date.now();db.prepare('DELETE FROM transactions WHERE expires_at<?').run(now);db.prepare('DELETE FROM sessions WHERE expires_at<?').run(now);db.prepare('DELETE FROM events WHERE created_at<?').run(now-90*86400000);},
+    clean() {const now=Date.now();db.prepare('DELETE FROM transactions WHERE expires_at<?').run(now);db.prepare('DELETE FROM linuxdo_transactions WHERE expires_at<?').run(now);db.prepare('DELETE FROM sessions WHERE expires_at<?').run(now);db.prepare('DELETE FROM events WHERE created_at<?').run(now-90*86400000);},
+    shortTransaction(fn) {db.exec('BEGIN IMMEDIATE');try{const result=fn();db.exec('COMMIT');return result;}catch(error){db.exec('ROLLBACK');throw error;}},
     transaction(token, values) {db.prepare('INSERT INTO transactions VALUES(?,?,?,?,?)').run(hash(token),values.state,values.verifier,values.nonce,Date.now()+600000);},
     consumeTransaction(token) {return db.prepare('DELETE FROM transactions WHERE token_hash=? RETURNING *').get(hash(token));},
+    linuxdoTransaction(token, values) {db.prepare('INSERT INTO linuxdo_transactions VALUES(?,?,?,?,?,?,?)').run(hash(token),values.state,values.verifier,values.nonce,values.clientId,values.redirectUri,Date.now()+600000);},
+    consumeLinuxdoTransaction(token) {return db.prepare('DELETE FROM linuxdo_transactions WHERE token_hash=? RETURNING *').get(hash(token));},
     login(identity) {
       const now=Date.now();
       let user=db.prepare('SELECT * FROM users WHERE issuer=? AND client_id=? AND subject=?').get(identity.issuer,identity.clientId,identity.subject);

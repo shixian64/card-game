@@ -1,12 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { CARDS, CARD_MAP, COMBOS, TALENTS, CONDITIONS, ECONOMY } from '../src/data.ts';
-import { initialState, random, owned, setLineup, strengthen, recycle, craft, summon, startRun, abandonRun, redraw, preview, chooseTalent, resolveTurn } from '../src/engine.ts';
+import { CARDS, CARD_MAP, COMBOS, TALENTS, CONDITIONS, LEGACY_ECONOMY, LEGACY_RARITY, ECONOMY, QUALITY, QUALITY_MAX, qualityName } from '../src/data.ts';
+import { initialState, random, owned, setLineup, forge, forgeOdds, recycle, craft, summon, startRun, abandonRun, redraw, preview, chooseTalent, resolveTurn } from '../src/engine.ts';
+import type { GameState } from '../src/engine.ts';
 import { DATE, fresh, funded, fixture, keys, roundTrip, bestKeys, finish } from './helpers.ts';
 
 test('内容表的编号、成本、组合与回收价格完整',()=>{
   for(const list of [CARDS,COMBOS,TALENTS,CONDITIONS])assert.equal(new Set(list.map(c=>c.id)).size,list.length);
-  for(const c of CARDS){assert.equal(CARD_MAP[c.id],c);assert.ok(c.cost>0&&c.cost<=7);assert.ok(c.base>0);assert.ok(ECONOMY.craft[c.rarity]>ECONOMY.recycle[c.rarity]);}
+  for(const c of CARDS){assert.equal(CARD_MAP[c.id],c);assert.ok(c.cost>0&&c.cost<=7);assert.ok(c.base>0);assert.ok(LEGACY_ECONOMY.craft[LEGACY_RARITY[c.id]]>LEGACY_ECONOMY.recycle[LEGACY_RARITY[c.id]]);assert.ok(ECONOMY.craftCost>ECONOMY.recycleReturn,'新经济：制作 180 > 回收 10');}
   assert.equal(CONDITIONS.length,6);assert.equal(COMBO_IDS().length,3);
 });
 function COMBO_IDS(){return COMBOS.map(c=>c.id);}
@@ -84,43 +85,126 @@ test('拥有实例以阶位和最佳纪录选择主卡，排序不改变原数�
   const s=fresh();const cards=s.cards.filter(c=>c.defId==='forest-sprout');cards[1].best=77;cards[2].rank=2;
   const before=structuredClone(s);assert.equal(owned(s,'forest-sprout')[0].uid,cards[2].uid);assert.equal(owned(s,'forest-sprout')[1].uid,cards[1].uid);assert.deepEqual(s,before);
 });
-test('同卡强化保留主实例及纪录，精确消耗材料和星币，最高三阶',()=>{
-  let s=funded();const main=owned(s,'forest-sprout')[0];main.best=91;const uid=main.uid;
-  const before=structuredClone(s);s=strengthen(s,'forest-sprout');assert.equal(s.coins,before.coins-90);assert.equal(s.cards.length,before.cards.length-2);assert.equal(owned(s,'forest-sprout')[0].uid,uid);assert.equal(owned(s,'forest-sprout')[0].best,91);assert.equal(owned(s,'forest-sprout')[0].rank,2);assert.equal(before.cards.find(c=>c.uid===uid)!.rank,1);
-  s=craft(craft(s,'forest-sprout'),'forest-sprout');const coins=s.coins;s=strengthen(s,'forest-sprout');assert.equal(s.coins,coins-180);assert.equal(owned(s,'forest-sprout').length,1);assert.deepEqual(owned(s,'forest-sprout')[0],{uid,defId:'forest-sprout',rank:3,best:91});assert.throws(()=>strengthen(s,'forest-sprout'),/最高/);roundTrip(s);
+function copiesState(defId:string,...qualities:number[]):GameState {
+  const s=funded();const keep=s.cards.filter(c=>c.defId!==defId);
+  const made=qualities.map((rank,index)=>({uid:'c'+(900+index),defId,rank,best:0}));
+  s.cards=[...keep,...made];s.nextId=Math.max(s.nextId,910);return s;
+}
+const queued=(values:number[])=>{let index=0;return ()=>values[Math.min(index++,values.length-1)];};
+test('同卡合成普通成功：保留主实例与纪录，精确消耗同品质材料和星币',()=>{
+  let s=copiesState('forest-sprout',1,1,1,1);const main=owned(s,'forest-sprout')[0];main.best=91;const uid=main.uid;
+  const before=structuredClone(s);const {state:next,result}=forge(s,'forest-sprout',{random:queued([0.99])});
+  assert.equal(result.branch,'upgrade_one');assert.equal(result.from,1);assert.equal(result.to,2);
+  assert.equal(next.coins,before.coins-QUALITY.forge.coins[0]);assert.equal(next.cards.length,before.cards.length-2);
+  assert.equal(owned(next,'forest-sprout')[0].uid,uid);assert.equal(owned(next,'forest-sprout')[0].rank,2);
+  assert.equal(owned(next,'forest-sprout')[0].best,91);assert.deepEqual(next.lastForge,result);roundTrip(next);
 });
-test('材料、星币不足与活跃主卡均不能强化且不改写输入',()=>{
-  for(const state of [fresh(),{...funded(),coins:0},startRun(funded())]){const id=state.coins===0?'forest-rabbit':'moon-deer';const before=structuredClone(state);assert.throws(()=>strengthen(state,id));assert.deepEqual(state,before);}
-  assert.throws(()=>strengthen(fresh(),'breeze-sprout'),/尚未拥有/);
+test('极低概率连升恰好跨两级，近顶级连升并入普通成功',()=>{
+  const early=forge(copiesState('forest-sprout',1,1,1,1),'forest-sprout',{random:queued([0.101])});
+  assert.equal(early.result.branch,'upgrade_two');assert.equal(early.result.to,3);
+  assert.equal(owned(early.state,'forest-sprout')[0].rank,3);
+  const top=forge(copiesState('forest-sprout',3,3,3),'forest-sprout',{random:queued([0.352])});
+  assert.equal(top.result.branch,'upgrade_two');assert.equal(top.result.to,5);assert.equal(top.result.from,3);
+  const mergedFail=forge(copiesState('forest-sprout',4,4,4),'forest-sprout',{random:queued([0.497])});
+  assert.equal(mergedFail.result.branch,'fail');
+  const mergedSuccess=forge(copiesState('forest-sprout',4,4,4),'forest-sprout',{random:queued([0.5])});
+  assert.equal(mergedSuccess.result.branch,'upgrade_one');assert.equal(mergedSuccess.result.to,5);
+  assert.deepEqual(forgeOdds(4),{fail:49.8,upgradeOne:50.2,upgradeTwo:0});
 });
-test('新的同名主实例出现后，旧的培育实例仍不能成为强化材料',()=>{
-  let s=startRun(funded());const locked=s.run!.deck.find(c=>c.defId==='forest-rabbit')!.uid;
-  while(s.nextId<100)s=craft(s,'moon-fawn');s=craft(s,'forest-rabbit');assert.equal(owned(s,'forest-rabbit')[0].uid,'c100');
-  s=strengthen(s,'forest-rabbit');assert.ok(s.cards.some(c=>c.uid===locked&&c.rank===1));assert.equal(owned(s,'forest-rabbit')[0].rank,2);roundTrip(s);
+test('失败必定保留主卡且品质不降，材料随机返还一到两张且星币不退',()=>{
+  const one=forge(copiesState('forest-sprout',1,1,1,1),'forest-sprout',{random:queued([0.05,0.5,0.9,0.9])});
+  assert.equal(one.result.branch,'fail');assert.equal(one.result.returnedUids.length,1);
+  assert.equal(one.state.cards.filter(c=>c.defId==='forest-sprout').length,3);
+  assert.equal(one.state.coins,funded().coins-QUALITY.forge.coins[0]);
+  assert.equal(owned(one.state,'forest-sprout')[0].rank,1);
+  assert.ok(one.state.cards.some(c=>c.uid===one.result.mainUid&&c.rank===1));
+  const all=forge(copiesState('forest-sprout',1,1,1,1),'forest-sprout',{random:queued([0.05,0.7])});
+  assert.equal(all.result.branch,'fail');assert.equal(all.result.returnedUids.length,2);
+  assert.equal(all.state.cards.filter(c=>c.defId==='forest-sprout').length,4);
+  assert.equal(all.state.coins,funded().coins-QUALITY.forge.coins[0]);
+  roundTrip(one.state);roundTrip(all.state);
 });
+test('星冕封顶、材料品质不符、材料重复、包含主卡、星币不足与培育锁定均拒绝且不改写输入',()=>{
+  const top=copiesState('forest-sprout',5,5,5);
+  assert.throws(()=>forge(top,'forest-sprout',{random:queued([0.5])}),/最高品质/);
+  const mixed=copiesState('forest-sprout',2,2,1);
+  assert.throws(()=>forge(mixed,'forest-sprout',{random:queued([0.5])}),/还需要 1 张 流光/);
+  const wrongQuality=mixed.cards.find(c=>c.defId==='forest-sprout'&&c.rank===1)!;
+  assert.throws(()=>forge(mixed,'forest-sprout',{materialUids:[wrongQuality.uid,wrongQuality.uid],random:queued([0.5])}),/同品质/);
+  const enough=copiesState('forest-sprout',1,1,1,1);
+  assert.throws(()=>forge(enough,'forest-sprout',{materialUids:['c901','c901'],random:queued([0.5])}),/重复/);
+  assert.throws(()=>forge(enough,'forest-sprout',{mainUid:'missing',random:queued([0.5])}),/主卡/);
+  assert.throws(()=>forge(enough,'forest-sprout',{mainUid:'c900',materialUids:['c900','c901'],random:queued([0.5])}),/材料/);
+  assert.throws(()=>forge(enough,'forest-sprout',{materialUids:['c901','c902','c903'],random:queued([0.5])}),/恰好 2 张/);
+  const broke={...copiesState('forest-sprout',1,1,1,1),coins:QUALITY.forge.coins[0]-1};
+  const before=structuredClone(broke);assert.throws(()=>forge(broke,'forest-sprout',{random:queued([0.5])}),/星币不足/);
+  assert.deepEqual(broke,before);
+  const running=startRun(copiesState('forest-sprout',1,1,1,1));
+  assert.throws(()=>forge(running,'forest-sprout',{mainUid:running.cards.find(c=>c.defId==='forest-sprout'&&c.rank===1)!.uid,random:queued([0.5])}),/培育/);
+  assert.throws(()=>forge(funded(),'breeze-sprout',{random:queued([0.5])}),/尚未拥有/);
+});
+test('培育中的同名实例不能成为主卡或材料，合成只消耗指定材料',()=>{
+  let s=startRun(funded());
+  const locked=s.run!.deck.find(c=>c.defId==='forest-rabbit')!.uid;
+  s=craft(s,'forest-rabbit');
+  const {state:next,result}=forge(s,'forest-rabbit',{mainUid:nextMainUid(s,'forest-rabbit'),materialUids:s.cards.filter(c=>c.defId==='forest-rabbit'&&c.rank===1&&!s.run!.deck.some(d=>d.uid===c.uid)&&c.uid!==nextMainUid(s,'forest-rabbit')).map(c=>c.uid),random:queued([0.99])});
+  assert.ok(next.cards.some(c=>c.uid===locked&&c.rank===1));
+  assert.equal(next.cards.filter(c=>c.defId==='forest-rabbit').length,2);
+  assert.equal(owned(next,'forest-rabbit')[0].rank,2);
+  assert.deepEqual(result.returnedUids,[]);roundTrip(next);
+  assert.throws(()=>forge(s,'forest-rabbit',{mainUid:locked,random:queued([0.5])}),/培育/);
+});
+function nextMainUid(state:GameState,defId:string):string {
+  const active=new Set(state.run?.deck.map(c=>c.uid)??[]);
+  return owned(state,defId).find(c=>!active.has(c.uid))!.uid;
+}
 test('分解只消耗未强化重复卡，保留最后一张和最高纪录',()=>{
   const s=fresh();const main=owned(s,'forest-sprout')[0];main.best=99;const after=recycle(s,'forest-sprout',3);
   assert.equal(after.cards.length,s.cards.length-3);assert.equal(after.dust,s.dust+30);assert.equal(after.coins,s.coins);assert.deepEqual(owned(after,'forest-sprout'),[main]);assert.throws(()=>recycle(after,'forest-sprout'),/最后一张/);roundTrip(after);
-  const strengthened=strengthen(funded(),'forest-sprout');const last=recycle(strengthened,'forest-sprout');assert.equal(owned(last,'forest-sprout')[0].rank,2);assert.throws(()=>recycle(last,'forest-sprout'));
+  const upgraded=copiesState('forest-sprout',2,1,1,1);const last=recycle(upgraded,'forest-sprout',3);assert.equal(owned(last,'forest-sprout')[0].rank,2);assert.throws(()=>recycle(last,'forest-sprout'));roundTrip(last);
 });
 test('分解保护活跃实例，并拒绝非正整数数量',()=>{
   let s=startRun(funded());const locked=s.run!.deck.find(c=>c.defId==='forest-rabbit')!.uid;
   while(s.nextId<100)s=craft(s,'moon-fawn');s=craft(s,'forest-rabbit');s=recycle(s,'forest-rabbit',2);assert.ok(s.cards.some(c=>c.uid===locked));assert.throws(()=>recycle(s,'forest-rabbit'));roundTrip(s);
   for(const amount of [0,-1,1.5,NaN,Infinity])assert.throws(()=>recycle(fresh(),'moon-fawn',amount));
 });
-test('所有稀有度的定向制作再分解都有净损耗',()=>{
-  for(const rarity of ['R','SR','SSR'] as const){const id=CARDS.find(c=>c.rarity===rarity)!.id;const s=funded();const made=craft(s,id);assert.equal(made.cards.length,s.cards.length+1);assert.equal(made.cards.at(-1)!.defId,id);assert.equal(made.dust,s.dust-ECONOMY.craft[rarity]);assert.equal(made.cards.at(-1)!.rank,1);const recovered=recycle(made,id);assert.equal(recovered.cards.length,s.cards.length);assert.equal(recovered.dust,s.dust-ECONOMY.craft[rarity]+ECONOMY.recycle[rarity]);assert.ok(recovered.dust<s.dust);roundTrip(recovered);}
+test('历史模式：所有稀有度的定向制作再分解都有净损耗（legacy 星尘口径）',()=>{
+  for(const rarity of ['R','SR','SSR'] as const){const id=CARDS.find(c=>LEGACY_RARITY[c.id]===rarity)!.id;const s=funded();const made=craft(s,id);assert.equal(made.cards.length,s.cards.length+1);assert.equal(made.cards.at(-1)!.defId,id);assert.equal(made.dust,s.dust-LEGACY_ECONOMY.craft[rarity]);assert.equal(made.cards.at(-1)!.rank,1);const recovered=recycle(made,id);assert.equal(recovered.cards.length,s.cards.length);assert.equal(recovered.dust,s.dust-LEGACY_ECONOMY.craft[rarity]+LEGACY_ECONOMY.recycle[rarity]);assert.ok(recovered.dust<s.dust);roundTrip(recovered);}
   assert.throws(()=>craft({...fresh(),dust:0},'sun-fox'),/星尘不足/);
 });
 test('未知与原型属性名不可以作为卡牌编号',()=>{
-  for(const id of ['missing','toString','constructor','__proto__'])for(const action of [craft,recycle,strengthen])assert.throws(()=>action(funded(),id),/未知星灵/);
+  for(const id of ['missing','toString','constructor','__proto__'])for(const action of [craft,recycle,(state:GameState,defId:string)=>forge(state,defId,{random:queued([0.5])})])assert.throws(()=>action(funded(),id),/未知星灵/);
 });
-test('召唤优先使用券，随后精确扣币且保留三张结果',()=>{
-  const s=fresh();const a=summon(s);assert.equal(a.tickets,s.tickets-1);assert.equal(a.coins,s.coins);assert.equal(a.cards.length,s.cards.length+3);assert.equal(a.lastSummon.length,3);assert.deepEqual(a.cards.slice(-3).map(c=>c.defId),a.lastSummon);roundTrip(a);
-  const b=summon({...s,tickets:0});assert.equal(b.coins,s.coins-ECONOMY.packCost);assert.equal(b.tickets,0);assert.throws(()=>summon({...s,tickets:0,coins:ECONOMY.packCost-1}));assert.deepEqual(summon(fresh(52)),summon(fresh(52)));
+test('历史模式召唤优先使用券，随后精确扣币且保留三张带品质的结果（legacy）',()=>{
+  const s=fresh();const a=summon(s);assert.equal(a.tickets,s.tickets-1);assert.equal(a.coins,s.coins);assert.equal(a.cards.length,s.cards.length+3);assert.equal(a.lastSummon.length,3);
+  assert.deepEqual(a.cards.slice(-3).map(c=>({defId:c.defId,quality:c.rank})),a.lastSummon);roundTrip(a);
+  const b=summon({...s,tickets:0});assert.equal(b.coins,s.coins-LEGACY_ECONOMY.packCost);assert.equal(b.tickets,0);assert.throws(()=>summon({...s,tickets:0,coins:LEGACY_ECONOMY.packCost-1}));assert.deepEqual(summon(fresh(52)),summon(fresh(52)));
 });
-test('跨 500 个 seed 的三连均至少包含 SR，实例编号不重复',()=>{
-  for(let index=1;index<=500;index++){const seed=Math.imul(index,0x9e3779b9)>>>0;const s=summon(fresh(seed));assert.ok(s.lastSummon.some(id=>CARD_MAP[id].rarity!=='R'),'seed '+seed);assert.equal(new Set(s.cards.map(c=>c.uid)).size,s.cards.length);}
+test('跨 800 个 seed：每包含至少一张 Q2+，前两张 Q1 时第三张保底 Q2，编号不重复',()=>{
+  for(let index=1;index<=800;index++){const seed=Math.imul(index,0x9e3779b9)>>>0;const s=summon(fresh(seed));
+    assert.ok(s.lastSummon.some(draw=>draw.quality>=2),'seed '+seed);
+    if(s.lastSummon[0].quality===1&&s.lastSummon[1].quality===1)assert.ok(s.lastSummon[2].quality>=2,'seed '+seed);
+    assert.equal(new Set(s.cards.map(c=>c.uid)).size,s.cards.length);}
+});
+test('品质频率随档位严格递减且概率表归一',()=>{
+  const total=QUALITY.summonQuality.reduce((sum,value)=>sum+value,0);
+  assert.ok(Math.abs(total-100)<1e-9);
+  for(let index=1;index<QUALITY.summonQuality.length;index++)assert.ok(QUALITY.summonQuality[index]<QUALITY.summonQuality[index-1]);
+  const counts=new Array(QUALITY.summonQuality.length).fill(0);let draws=0;
+  for(let index=1;index<=1500;index++){const s=summon(fresh(Math.imul(index,0x9e3779b9)>>>0));for(const draw of s.lastSummon)counts[draw.quality-1]++;draws+=3;}
+  for(let index=1;index<counts.length;index++)assert.ok(counts[index]<counts[index-1],'档位 '+qualityName(index+1)+' 未严格递减');
+  assert.ok(counts[0]/draws>0.45&&counts[0]/draws<0.6,'Q1 频率 '+counts[0]/draws);
+  assert.ok(counts[4]/draws>0.008&&counts[4]/draws<0.025,'Q5 频率 '+counts[4]/draws);
+});
+test('合成概率表：每档互斥三分支和为 100，失败率逐档上升，连升并入近顶级',()=>{
+  for(let from=1;from<QUALITY_MAX;from++){const odds=forgeOdds(from);
+    assert.ok(Math.abs(odds.fail+odds.upgradeOne+odds.upgradeTwo-100)<1e-9,'档位 '+from);
+    if(from>1)assert.ok(odds.fail>forgeOdds(from-1).fail,'失败率未递增 '+from);}
+  assert.equal(forgeOdds(4).upgradeTwo,0);assert.equal(forgeOdds(4).upgradeOne,50.2);
+});
+test('召唤恰好消耗九次随机数，种子链完全确定',()=>{
+  const seed=987654321;let chain=seed;for(let i=0;i<9;i++)[,chain]=random(chain);
+  assert.equal(summon(fresh(seed)).rng,chain);
 });
 test('库存和安全整数边界不会生成无法导出的存档',()=>{
   const s=funded();s.cards=Array.from({length:10000},(_,i)=>({uid:'c'+(i+1),defId:'moon-fawn',rank:1,best:0}));s.nextId=10001;
@@ -160,8 +244,9 @@ test('无效出牌及非法日期不改变资源、回合或发现',()=>{
 test('结束未完成培育不授奖，并可开始新实例',()=>{
   let s=startRun(fresh());s=resolveTurn(s,bestKeys(s.run!),DATE);const abandoned=abandonRun(s);assert.equal(abandoned.run,null);assert.equal(abandoned.results.length,0);assert.equal(abandoned.coins,s.coins);assert.equal(abandoned.dust,s.dust);assert.deepEqual(abandoned.cards,s.cards);assert.notEqual(startRun(abandoned).run!.id,s.run!.id);roundTrip(abandoned);
 });
-test('完成后解锁编队与强化，旧成果保持原始快照',()=>{
-  const s=finish(funded(),true);const result=structuredClone(s.results[0]);let next=setLineup(s,[...s.lineup].reverse());next=strengthen(next,'forest-rabbit');assert.deepEqual(next.results[0],result);roundTrip(next);const again=startRun(next);assert.notEqual(again.run!.id,s.run!.id);assert.equal(again.results.length,1);roundTrip(again);
+test('完成后解锁编队与合成，旧成果保持原始快照',()=>{
+  const s=finish(funded(),true);const result=structuredClone(s.results[0]);let next=setLineup(s,[...s.lineup.reverse()]);
+  next=forge(next,'forest-rabbit',{random:queued([0.99])}).state;assert.deepEqual(next.results[0],result);roundTrip(next);const again=startRun(next);assert.notEqual(again.run!.id,s.run!.id);assert.equal(again.results.length,1);roundTrip(again);
 });
 test('完成后的最高纪录只提高不下降，手记最多保留五十次',()=>{
   let s=fresh(512);let best=0;
@@ -169,11 +254,6 @@ test('完成后的最高纪录只提高不下降，手记最多保留五十次',
   assert.equal(s.results.length,50);assert.equal(new Set(s.results.map(r=>r.id)).size,50);assert.equal(s.results[0].id,s.run!.id);
 });
 
-test('三张基础结果都是 R 时，第三张保底替换为 SR',()=>{
-  const seed=1013904242;let rng=seed;
-  for(let i=0;i<3;i++){let roll:number;[roll,rng]=random(rng);assert.ok(roll>=.4);[,rng]=random(rng);}
-  const s=summon(fresh(seed));assert.deepEqual(s.lastSummon.map(id=>CARD_MAP[id].rarity),['R','R','SR']);assert.equal(s.rng,rng);
-});
 test('初始化 seed 统一转换为有效的非零 32 位随机状态',()=>{
   assert.equal(initialState(-1).rng,0xffffffff);for(const seed of [NaN,Infinity,0,0x100000000]){const s=initialState(seed);assert.equal(s.rng,42);roundTrip(s);}
 });

@@ -4,6 +4,7 @@ dist/
 .openai/*.local.json
 .openai/.runtime/
 qa/
+artifacts/
 .sites-runtime/
 
 .env

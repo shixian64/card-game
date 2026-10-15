@@ -65,7 +65,7 @@ test('recommendation respects 28 slots, population limits, strongest permanent c
 test('collection artwork stays free of rarity, affinity and level corner labels',()=>{
   const body=app.slice(app.indexOf('function Card('),app.indexOf('function Confirmation('));
   for(const className of ['className="rank-badge"','className="card-rarity"','className="card-affinity"'])assert.ok(!body.includes(className));
-  assert.ok(body.includes('data-rarity={def.rarity}'));
+  assert.ok(!body.includes('data-rarity'),'卡种稀有度已取消：卡面不得再输出 rarity 属性');
   assert.ok(body.includes('data-rank={rank}'));
   assert.ok(!app.includes('className="portrait-rarity"'));
   assert.ok(!app.includes('className="portrait-affinity"'));

@@ -18,7 +18,7 @@ function beforeFrame(battle:BattleState,index:number) {return index===0?battle:b
 function decimal(value:number):number {return Math.round(value*10)/10;}
 function powers(unit:CombatUnit):number[] {return [...unit.skillDescription.matchAll(/(\d+(?:\.\d+)?)%/g)].map(match=>Number(match[1])/100);}
 function assertBounds(battle:BattleState):void {
-  assert.equal(battle.version,2);assert.equal(battle.status,'playing');assert.equal(battle.round,1);
+  assert.equal(battle.version,3);assert.equal(battle.status,'playing');assert.equal(battle.round,1);
   assert.equal(battle.maxRounds,32);assert.ok(battle.player.length>=1&&battle.player.length<=6);assert.ok(battle.enemy.length>=1&&battle.enemy.length<=6);
   assert.ok(battle.frames.length>0&&battle.frames.length<=400);
   const ids=[...battle.logs,...battle.frames.flatMap(f=>f.logs)].map(l=>l.id);
@@ -87,7 +87,7 @@ test('敌方人口可独立指定 1–6，升人口不会同步给对方加人',
 
 test('卡牌、永久等级、局内星级和种子严格校验',()=>{
   for(const id of ['missing','constructor','__proto__'])assert.throws(()=>getCombatStats(card(id)));
-  for(const rank of [0,4,-1,1.5,NaN,Infinity])assert.throws(()=>getCombatStats(card('moon-fawn',rank)));
+  for(const rank of [0,6,-1,1.5,NaN,Infinity])assert.throws(()=>getCombatStats(card('moon-fawn',rank)));
   for(const stars of [null,0,4,-1,1.5,'2',NaN])assert.throws(()=>getCombatStats({...card('moon-fawn'),stars} as BattleCard));
   for(const uid of ['', 'x'.repeat(129)])assert.throws(()=>getCombatStats(card('moon-fawn',1,uid)));
   for(const seed of [-1,.5,NaN,Infinity,0x100000000])assert.throws(()=>createBattle(team(),seed));
@@ -100,12 +100,17 @@ test('站位与人口等长，唯一的 0–27 整数格位；拒绝重复、越
   assert.doesNotThrow(()=>createBattle(team().slice(0,3),1,[0,20,27]));
 });
 
-test('4×7 部署映射 8×7 战场，曼哈顿距离与位置真实对应',()=>{
+test('4×7 部署映射 8×7 六边形战场，错列格位与六边形距离真实对应',()=>{
   const battle=createBattle(team(),1,[0,6,7,20,21,27]);
   for(const unit of battle.player){assert.equal(unit.row,4+Math.floor(unit.slot/7));assert.equal(unit.col,unit.slot%7);}
   for(const unit of battle.enemy){assert.equal(unit.row,3-Math.floor(unit.slot/7));assert.equal(unit.col,unit.slot%7);}
   assert.equal(new Set([...battle.player,...battle.enemy].map(u=>u.row*7+u.col)).size,12);
-  assert.equal(combatDistance({row:4,col:3},{row:3,col:3}),1);assert.equal(combatDistance({row:4,col:3},{row:3,col:2}),2);
+  // 六边形距离：相邻为 1；错列后斜向相邻也是 1，同列隔行为 2。
+  assert.equal(combatDistance({row:4,col:3},{row:3,col:3}),1);
+  assert.equal(combatDistance({row:4,col:3},{row:3,col:2}),1);
+  assert.equal(combatDistance({row:4,col:3},{row:4,col:5}),2);
+  assert.equal(combatDistance({row:4,col:3},{row:2,col:3}),2);
+  assert.equal(combatDistance({row:0,col:0},{row:7,col:6}),10);
 });
 
 const BASES:[string,CombatRole,number,number,number,number,number,number][]=[
@@ -126,17 +131,20 @@ test('36 个独立技能名、五职业与五种视觉效果，没有医师辅�
   assert.ok(stats.every(s=>s.skillDescription&&s.range>=1&&s.range<=4));
 });
 
-test('长期 Lv 每阶 3% 生命和 2% 攻击，局内★每星 12%/8%，只计算一次',()=>{
+test('品质每阶 4% 生命、3% 攻击与 3% 技能系数，局内★每星 12%/8%，只计算一次',()=>{
   for(const def of CARDS){
     const base=getCombatStats(card(def.id));
-    for(const rank of [1,2,3])for(const stars of [1,2,3] as const){
+    for(const rank of [1,2,3,4,5])for(const stars of [1,2,3] as const){
       const stats=getCombatStats(card(def.id,rank,'test',stars));
-      assert.equal(stats.hp,Math.round(base.hp*(1+(rank-1)*.03)*(1+(stars-1)*.12)));
-      assert.equal(stats.attack,decimal(base.attack*(1+(rank-1)*.02)*(1+(stars-1)*.08)));
+      assert.equal(stats.hp,Math.round(base.hp*(1+(rank-1)*.04)*(1+(stars-1)*.12)));
+      assert.equal(stats.attack,decimal(base.attack*(1+(rank-1)*.03)*(1+(stars-1)*.08)));
+      assert.equal(stats.skillPower,Number((base.skillPower*(1+(rank-1)*.03)).toFixed(4)));
+      assert.equal(stats.skillSecondary,Number((base.skillSecondary*(1+(rank-1)*.03)).toFixed(4)));
       for(const key of ['range','armor','resistance','speed','skillName','effect'] as const)assert.equal(stats[key],base[key]);
     }
     assert.deepEqual(base,getCombatStats(card(def.id,1,'other',1)));
   }
+  assert.ok(getCombatStats(card('sun-fox',5)).skillPower>getCombatStats(card('sun-fox',1)).skillPower);
   const battle=createBattle([card('sun-cub',2,'a',3)],8);assert.equal(battle.player[0].stars,3);assert.equal(battle.player[0].rank,2);
   assert.ok(battle.enemy.every(u=>u.stars===1));
 });

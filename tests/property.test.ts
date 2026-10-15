@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CARDS } from '../src/data.ts';
-import { startRun, chooseTalent, redraw, resolveTurn, preview, craft, strengthen, summon, recycle } from '../src/engine.ts';
+import { startRun, chooseTalent, redraw, resolveTurn, preview, craft, forge, summon, recycle } from '../src/engine.ts';
 import { DATE, fresh, funded, roundTrip, bestKeys } from './helpers.ts';
 
 test('160 种 seed 的不同策略可完成六回合，所有中间存档均可重载',()=>{
   for(let seed=1;seed<=160;seed++){
-    let s=fresh(Math.imul(seed,0x9e3779b9)>>>0);if(seed%3===0)s=strengthen(s,'forest-sprout');
+    let s=fresh(Math.imul(seed,0x9e3779b9)>>>0);if(seed%3===0)s=forge(s,'forest-sprout',{random:()=>0.99}).state;
     if(seed%4===0){s=craft({...s,dust:1000},'breeze-sprout');s.lineup=[...s.lineup.slice(0,5),'breeze-sprout'];}
     s=startRun(s);const coins=s.coins,dust=s.dust;let actions=0;
     while(s.run!.phase!=='complete'){

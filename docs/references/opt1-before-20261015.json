@@ -1,0 +1,5479 @@
+{
+  "date": "2026-10-15",
+  "note": "O1 修改前工作树快照；不是 HEAD，保留原文件与原规则，不覆盖 O0。",
+  "files": {
+    "src/data.ts": "5ca6d2722285f9a710315321fbc395cb582c274828496c4f1a3f833493ae986c",
+    "src/battle.ts": "58ccf864de5556a6fa05a1521d75b8154fad382a60481b1b894573520c16692b",
+    "src/duel-sim.ts": "357334c60487c0b8c99b745090560f4ec7dfb37d09a912ed8c46c856206c2958",
+    "src/engine.ts": "79d4d3eea0c8a179aade16443f43b3c1e2d72381018454104205d61485e45466",
+    "src/App.tsx": "4619609acfe1e190f6650c49088c4a9c92673f3d6afeb72de17a64d9730f8bf9",
+    "src/MatchArena.tsx": "8b13d2034c46146d3da867f5f21271ed84ca948489ef69f5c6311027e646c12c",
+    "server/match.mjs": "829fc89e55a5064e2eb22845f42b1d613680b5b8c88e80af16d7cd9bd775b446",
+    "tests/catalog.test.ts": "562542dee3ceb77bd38f5a4b7daf8c1303cf02aedd6ab853a781d02aa5dfffec",
+    "tests/engine.test.ts": "fa942d0627a9a962d6b257459255ccfc8fdde786878ff6e38ae6a7d8ec4cf04f",
+    "tests/match-ui.test.ts": "8adf61b0c2efc917baf8f33e1f53266d0bb414f84940b4c1b48d96c5de35f162",
+    "Dockerfile": "40260c697399d0c32251bc24423af20760c3699c2b394a386fd9ea0ef9a3f1ff",
+    "scripts/opt0-baseline.mjs": "f2451b5d1e5b833a4f6a55f42aff7f30f665e99feb2886f2405f2f23d4a011ed",
+    "scripts/economy-migration-dryrun.mjs": "fe82d279cfd9b84e2a5238968b777f1c5fc8269c17e8fc77b95adb544ad5076b"
+  },
+  "catalog": [
+    {
+      "id": "moon-deer",
+      "name": "月纱灵鹿",
+      "subtitle": "月光织就的温柔",
+      "affinity": "moon",
+      "art": "moon-deer",
+      "cost": 3,
+      "base": 9,
+      "trait": "echo",
+      "traitName": "夹心加分",
+      "description": "触发夹心，+12 分。"
+    },
+    {
+      "id": "sun-fox",
+      "name": "烛羽灵狐",
+      "subtitle": "温暖而明亮的相遇",
+      "affinity": "sun",
+      "art": "sun-fox",
+      "cost": 3,
+      "base": 10,
+      "trait": "flare",
+      "traitName": "末位加分",
+      "description": "放在第 3 张，+10 分。"
+    },
+    {
+      "id": "forest-rabbit",
+      "name": "苔冠旅者",
+      "subtitle": "在林间听见生长",
+      "affinity": "forest",
+      "art": "forest-rabbit",
+      "cost": 2,
+      "base": 7,
+      "trait": "bloom",
+      "traitName": "三色加分",
+      "description": "触发三异色，+10 分。"
+    },
+    {
+      "id": "moon-fawn",
+      "name": "银角初醒",
+      "subtitle": "第一缕安静的月光",
+      "affinity": "moon",
+      "art": "moon-fawn",
+      "cost": 1,
+      "base": 4,
+      "trait": "quiet",
+      "traitName": "首位加分",
+      "description": "放在第 1 张，+5 分。"
+    },
+    {
+      "id": "sun-cub",
+      "name": "晨光使者",
+      "subtitle": "把今天点亮一点",
+      "affinity": "sun",
+      "art": "sun-cub",
+      "cost": 1,
+      "base": 5,
+      "trait": "lead",
+      "traitName": "接日加分",
+      "description": "下一张是日系，+8 分。"
+    },
+    {
+      "id": "forest-sprout",
+      "name": "林间回响",
+      "subtitle": "小小的新生奇迹",
+      "affinity": "forest",
+      "art": "forest-sprout",
+      "cost": 1,
+      "base": 4,
+      "trait": "root",
+      "traitName": "省点加分",
+      "description": "每剩 1 点行动，+2 分。"
+    },
+    {
+      "id": "star-deer",
+      "name": "星河守望",
+      "subtitle": "漫长星夜的陪伴",
+      "affinity": "moon",
+      "art": "moon-deer",
+      "cost": 2,
+      "base": 7,
+      "trait": "tidal",
+      "traitName": "跟月加分",
+      "description": "上一张是月系，+9 分。"
+    },
+    {
+      "id": "golden-fox",
+      "name": "金焰巡游",
+      "subtitle": "穿过森林的暖风",
+      "affinity": "sun",
+      "art": "sun-fox",
+      "cost": 2,
+      "base": 7,
+      "trait": "duet",
+      "traitName": "跟森加分",
+      "description": "上一张是森系，+10 分。"
+    },
+    {
+      "id": "verdant-rabbit",
+      "name": "翡翠梦境",
+      "subtitle": "万千新芽的拥抱",
+      "affinity": "forest",
+      "art": "forest-rabbit",
+      "cost": 3,
+      "base": 8,
+      "trait": "weave",
+      "traitName": "组合加分",
+      "description": "三同色或三异色，+12 分。"
+    },
+    {
+      "id": "mist-deer",
+      "name": "薄雾来信",
+      "subtitle": "还记得上次的约定",
+      "affinity": "moon",
+      "art": "moon-fawn",
+      "cost": 1,
+      "base": 4,
+      "trait": "memory",
+      "traitName": "重复组合",
+      "description": "连续两回合组合相同，+9 分。"
+    },
+    {
+      "id": "dawn-fox",
+      "name": "曙色跃动",
+      "subtitle": "不留余力地闪耀",
+      "affinity": "sun",
+      "art": "sun-cub",
+      "cost": 2,
+      "base": 6,
+      "trait": "rush",
+      "traitName": "用尽加分",
+      "description": "刚好用完行动点，+12 分。"
+    },
+    {
+      "id": "breeze-sprout",
+      "name": "风铃新芽",
+      "subtitle": "为不一样的世界好奇",
+      "affinity": "forest",
+      "art": "forest-sprout",
+      "cost": 2,
+      "base": 7,
+      "trait": "wander",
+      "traitName": "三色居中",
+      "description": "触发三异色且在第 2 张，+14 分。"
+    },
+    {
+      "id": "lunar-guide",
+      "name": "雾灯引路",
+      "subtitle": "图鉴变体 · 月系接日",
+      "affinity": "moon",
+      "art": "moon-fawn",
+      "cost": 1,
+      "base": 4,
+      "trait": "lead",
+      "traitName": "接日加分",
+      "description": "下一张是日系，+8 分。"
+    },
+    {
+      "id": "silver-gap",
+      "name": "霜叶余白",
+      "subtitle": "图鉴变体 · 月系省点",
+      "affinity": "moon",
+      "art": "moon-fawn",
+      "cost": 1,
+      "base": 3,
+      "trait": "root",
+      "traitName": "省点加分",
+      "description": "每剩 1 点行动，+2 分。"
+    },
+    {
+      "id": "crescent-dancer",
+      "name": "弦月舞步",
+      "subtitle": "图鉴变体 · 月系中位",
+      "affinity": "moon",
+      "art": "moon-deer",
+      "cost": 2,
+      "base": 6,
+      "trait": "center",
+      "traitName": "中位加分",
+      "description": "放在第 2 张，+8 分。"
+    },
+    {
+      "id": "frost-return",
+      "name": "霜桥回音",
+      "subtitle": "图鉴变体 · 月系异色接力",
+      "affinity": "moon",
+      "art": "moon-fawn",
+      "cost": 2,
+      "base": 6,
+      "trait": "contrast",
+      "traitName": "异色接力",
+      "description": "上一张颜色不同，+7 分。"
+    },
+    {
+      "id": "moon-soloist",
+      "name": "静夜独奏",
+      "subtitle": "图鉴变体 · 月系单张",
+      "affinity": "moon",
+      "art": "moon-deer",
+      "cost": 2,
+      "base": 7,
+      "trait": "solo",
+      "traitName": "单张加分",
+      "description": "本回合只出这 1 张，+16 分。"
+    },
+    {
+      "id": "eclipse-deer",
+      "name": "月蚀织梦",
+      "subtitle": "图鉴变体 · 月系组合",
+      "affinity": "moon",
+      "art": "moon-deer",
+      "cost": 3,
+      "base": 8,
+      "trait": "weave",
+      "traitName": "组合加分",
+      "description": "三同色或三异色，+12 分。"
+    },
+    {
+      "id": "starlit-arch",
+      "name": "群星领唱",
+      "subtitle": "图鉴变体 · 月系三色",
+      "affinity": "moon",
+      "art": "moon-deer",
+      "cost": 3,
+      "base": 8,
+      "trait": "bloom",
+      "traitName": "三色加分",
+      "description": "触发三异色，+10 分。"
+    },
+    {
+      "id": "comet-tail",
+      "name": "彗尾落幕",
+      "subtitle": "图鉴变体 · 月系末位",
+      "affinity": "moon",
+      "art": "moon-deer",
+      "cost": 3,
+      "base": 9,
+      "trait": "flare",
+      "traitName": "末位加分",
+      "description": "放在第 3 张，+10 分。"
+    },
+    {
+      "id": "amber-pause",
+      "name": "琥珀留白",
+      "subtitle": "图鉴变体 · 日系省点",
+      "affinity": "sun",
+      "art": "sun-cub",
+      "cost": 1,
+      "base": 3,
+      "trait": "root",
+      "traitName": "省点加分",
+      "description": "每剩 1 点行动，+2 分。"
+    },
+    {
+      "id": "sun-first",
+      "name": "旭日先声",
+      "subtitle": "图鉴变体 · 日系首位",
+      "affinity": "sun",
+      "art": "sun-cub",
+      "cost": 1,
+      "base": 4,
+      "trait": "quiet",
+      "traitName": "首位加分",
+      "description": "放在第 1 张，+5 分。"
+    },
+    {
+      "id": "sun-center",
+      "name": "日环圆舞",
+      "subtitle": "图鉴变体 · 日系中位",
+      "affinity": "sun",
+      "art": "sun-fox",
+      "cost": 2,
+      "base": 6,
+      "trait": "center",
+      "traitName": "中位加分",
+      "description": "放在第 2 张，+8 分。"
+    },
+    {
+      "id": "sundial-memory",
+      "name": "日晷留声",
+      "subtitle": "图鉴变体 · 日系重复组合",
+      "affinity": "sun",
+      "art": "sun-cub",
+      "cost": 2,
+      "base": 6,
+      "trait": "memory",
+      "traitName": "重复组合",
+      "description": "连续两回合组合相同，+9 分。"
+    },
+    {
+      "id": "sun-change",
+      "name": "彩霞变奏",
+      "subtitle": "图鉴变体 · 日系变换组合",
+      "affinity": "sun",
+      "art": "sun-fox",
+      "cost": 2,
+      "base": 6,
+      "trait": "shift",
+      "traitName": "变换组合",
+      "description": "连续两回合组合不同，+11 分。"
+    },
+    {
+      "id": "solar-prism",
+      "name": "曜石万彩",
+      "subtitle": "图鉴变体 · 日系三色",
+      "affinity": "sun",
+      "art": "sun-fox",
+      "cost": 3,
+      "base": 8,
+      "trait": "bloom",
+      "traitName": "三色加分",
+      "description": "触发三异色，+10 分。"
+    },
+    {
+      "id": "gold-mirror",
+      "name": "金镜双生",
+      "subtitle": "图鉴变体 · 日系夹心",
+      "affinity": "sun",
+      "art": "sun-fox",
+      "cost": 3,
+      "base": 9,
+      "trait": "echo",
+      "traitName": "夹心加分",
+      "description": "触发夹心，+12 分。"
+    },
+    {
+      "id": "solstice-alone",
+      "name": "至日独照",
+      "subtitle": "图鉴变体 · 日系单张",
+      "affinity": "sun",
+      "art": "sun-fox",
+      "cost": 3,
+      "base": 9,
+      "trait": "solo",
+      "traitName": "单张加分",
+      "description": "本回合只出这 1 张，+16 分。"
+    },
+    {
+      "id": "fern-opener",
+      "name": "蕨叶先声",
+      "subtitle": "图鉴变体 · 森系首位",
+      "affinity": "forest",
+      "art": "forest-sprout",
+      "cost": 1,
+      "base": 4,
+      "trait": "quiet",
+      "traitName": "首位加分",
+      "description": "放在第 1 张，+5 分。"
+    },
+    {
+      "id": "moss-tide",
+      "name": "苔溪逐月",
+      "subtitle": "图鉴变体 · 森系跟月",
+      "affinity": "forest",
+      "art": "forest-sprout",
+      "cost": 2,
+      "base": 5,
+      "trait": "tidal",
+      "traitName": "跟月加分",
+      "description": "上一张是月系，+9 分。"
+    },
+    {
+      "id": "twig-change",
+      "name": "新枝变奏",
+      "subtitle": "图鉴变体 · 森系变换组合",
+      "affinity": "forest",
+      "art": "forest-sprout",
+      "cost": 2,
+      "base": 5,
+      "trait": "shift",
+      "traitName": "变换组合",
+      "description": "连续两回合组合不同，+11 分。"
+    },
+    {
+      "id": "clover-step",
+      "name": "三叶踏歌",
+      "subtitle": "图鉴变体 · 森系异色接力",
+      "affinity": "forest",
+      "art": "forest-rabbit",
+      "cost": 2,
+      "base": 6,
+      "trait": "contrast",
+      "traitName": "异色接力",
+      "description": "上一张颜色不同，+7 分。"
+    },
+    {
+      "id": "seed-center",
+      "name": "种子圆舞",
+      "subtitle": "图鉴变体 · 森系中位",
+      "affinity": "forest",
+      "art": "forest-sprout",
+      "cost": 2,
+      "base": 6,
+      "trait": "center",
+      "traitName": "中位加分",
+      "description": "放在第 2 张，+8 分。"
+    },
+    {
+      "id": "canopy-coda",
+      "name": "树冠终曲",
+      "subtitle": "图鉴变体 · 森系末位",
+      "affinity": "forest",
+      "art": "forest-rabbit",
+      "cost": 3,
+      "base": 9,
+      "trait": "flare",
+      "traitName": "末位加分",
+      "description": "放在第 3 张，+10 分。"
+    },
+    {
+      "id": "emerald-mirror",
+      "name": "翠镜回环",
+      "subtitle": "图鉴变体 · 森系夹心",
+      "affinity": "forest",
+      "art": "forest-rabbit",
+      "cost": 3,
+      "base": 9,
+      "trait": "echo",
+      "traitName": "夹心加分",
+      "description": "触发夹心，+12 分。"
+    },
+    {
+      "id": "bough-embrace",
+      "name": "连枝合唱",
+      "subtitle": "图鉴变体 · 森系接力",
+      "affinity": "forest",
+      "art": "forest-rabbit",
+      "cost": 3,
+      "base": 8,
+      "trait": "duet",
+      "traitName": "跟森加分",
+      "description": "上一张是森系，+10 分。"
+    }
+  ],
+  "stats": [
+    {
+      "defId": "moon-deer",
+      "stats": {
+        "role": "坦克",
+        "hp": 180,
+        "attack": 14,
+        "armor": 45,
+        "resistance": 35,
+        "range": 1,
+        "speed": 40,
+        "effect": "shield",
+        "skillPower": 0.195,
+        "skillSecondary": 0,
+        "skillName": "月纱护阵",
+        "skillDescription": "获得最大生命 19.5% 的护盾；有盾时优先吸引 2 格内敌人。"
+      }
+    },
+    {
+      "defId": "sun-fox",
+      "stats": {
+        "role": "法师",
+        "hp": 95,
+        "attack": 22,
+        "armor": 12,
+        "resistance": 25,
+        "range": 3,
+        "speed": 50,
+        "effect": "blast",
+        "skillPower": 1.3,
+        "skillSecondary": 0.55,
+        "skillName": "烛羽焰潮",
+        "skillDescription": "目标受到 130% 法术伤害，目标周围 1 格敌人受到 55% 法术伤害。"
+      }
+    },
+    {
+      "defId": "forest-rabbit",
+      "stats": {
+        "role": "战士",
+        "hp": 145,
+        "attack": 23,
+        "armor": 28,
+        "resistance": 20,
+        "range": 1,
+        "speed": 55,
+        "effect": "slash",
+        "skillPower": 1.35,
+        "skillSecondary": 0.65,
+        "skillName": "苔冠横扫",
+        "skillDescription": "目标受到 135% 物理伤害，身旁 1 格其他敌人受到 65% 物理伤害。"
+      }
+    },
+    {
+      "defId": "moon-fawn",
+      "stats": {
+        "role": "刺客",
+        "hp": 105,
+        "attack": 28,
+        "armor": 15,
+        "resistance": 15,
+        "range": 1,
+        "speed": 90,
+        "effect": "dash",
+        "skillPower": 1.8,
+        "skillSecondary": 0,
+        "skillName": "银角突袭",
+        "skillDescription": "开场突入后排空格；技能造成 180% 单体物理伤害。"
+      }
+    },
+    {
+      "defId": "sun-cub",
+      "stats": {
+        "role": "射手",
+        "hp": 100,
+        "attack": 24,
+        "armor": 12,
+        "resistance": 15,
+        "range": 4,
+        "speed": 78,
+        "effect": "projectile",
+        "skillPower": 0.85,
+        "skillSecondary": 0,
+        "skillName": "晨光双矢",
+        "skillDescription": "连射两次，每次 85% 物理伤害；后排部署可狙击后排，仍需进入射程。"
+      }
+    },
+    {
+      "defId": "forest-sprout",
+      "stats": {
+        "role": "法师",
+        "hp": 95,
+        "attack": 22,
+        "armor": 12,
+        "resistance": 25,
+        "range": 3,
+        "speed": 50,
+        "effect": "blast",
+        "skillPower": 1.2,
+        "skillSecondary": 0.65,
+        "skillName": "林间爆芽",
+        "skillDescription": "目标受到 120% 法术伤害，目标周围 1 格敌人受到 65% 法术伤害。"
+      }
+    },
+    {
+      "defId": "star-deer",
+      "stats": {
+        "role": "坦克",
+        "hp": 180,
+        "attack": 14,
+        "armor": 45,
+        "resistance": 39,
+        "range": 1,
+        "speed": 40,
+        "effect": "shield",
+        "skillPower": 0.1885,
+        "skillSecondary": 0,
+        "skillName": "星河帷幕",
+        "skillDescription": "获得最大生命 18.85% 的护盾；有盾时优先吸引 2 格内敌人。"
+      }
+    },
+    {
+      "defId": "golden-fox",
+      "stats": {
+        "role": "法师",
+        "hp": 95,
+        "attack": 22,
+        "armor": 14,
+        "resistance": 25,
+        "range": 2,
+        "speed": 50,
+        "effect": "blast",
+        "skillPower": 1.45,
+        "skillSecondary": 0.45,
+        "skillName": "金焰爆破",
+        "skillDescription": "目标受到 145% 法术伤害，目标周围 1 格敌人受到 45% 法术伤害。"
+      }
+    },
+    {
+      "defId": "verdant-rabbit",
+      "stats": {
+        "role": "战士",
+        "hp": 145,
+        "attack": 23,
+        "armor": 28,
+        "resistance": 23,
+        "range": 1,
+        "speed": 55,
+        "effect": "slash",
+        "skillPower": 1.25,
+        "skillSecondary": 0.8,
+        "skillName": "翡翠旋斩",
+        "skillDescription": "目标受到 125% 物理伤害，身旁 1 格其他敌人受到 80% 物理伤害。"
+      }
+    },
+    {
+      "defId": "mist-deer",
+      "stats": {
+        "role": "刺客",
+        "hp": 105,
+        "attack": 28,
+        "armor": 13,
+        "resistance": 18,
+        "range": 1,
+        "speed": 90,
+        "effect": "dash",
+        "skillPower": 1.85,
+        "skillSecondary": 0,
+        "skillName": "薄雾追影",
+        "skillDescription": "开场突入后排空格；技能造成 185% 单体物理伤害。"
+      }
+    },
+    {
+      "defId": "dawn-fox",
+      "stats": {
+        "role": "射手",
+        "hp": 100,
+        "attack": 24,
+        "armor": 14,
+        "resistance": 15,
+        "range": 3,
+        "speed": 78,
+        "effect": "projectile",
+        "skillPower": 0.95,
+        "skillSecondary": 0,
+        "skillName": "曙色追猎",
+        "skillDescription": "连射两次，每次 95% 物理伤害；后排部署可狙击后排，仍需进入射程。"
+      }
+    },
+    {
+      "defId": "breeze-sprout",
+      "stats": {
+        "role": "法师",
+        "hp": 95,
+        "attack": 22,
+        "armor": 12,
+        "resistance": 25,
+        "range": 4,
+        "speed": 50,
+        "effect": "blast",
+        "skillPower": 1.15,
+        "skillSecondary": 0.55,
+        "skillName": "风铃震波",
+        "skillDescription": "目标受到 115% 法术伤害，目标周围 1 格敌人受到 55% 法术伤害。"
+      }
+    },
+    {
+      "defId": "lunar-guide",
+      "stats": {
+        "role": "刺客",
+        "hp": 105,
+        "attack": 28,
+        "armor": 15,
+        "resistance": 20,
+        "range": 1,
+        "speed": 90,
+        "effect": "dash",
+        "skillPower": 1.75,
+        "skillSecondary": 0,
+        "skillName": "雾灯掠影",
+        "skillDescription": "开场突入后排空格；技能造成 175% 单体物理伤害。"
+      }
+    },
+    {
+      "defId": "silver-gap",
+      "stats": {
+        "role": "刺客",
+        "hp": 105,
+        "attack": 28,
+        "armor": 12,
+        "resistance": 15,
+        "range": 1,
+        "speed": 90,
+        "effect": "dash",
+        "skillPower": 1.95,
+        "skillSecondary": 0,
+        "skillName": "霜叶瞬斩",
+        "skillDescription": "开场突入后排空格；技能造成 195% 单体物理伤害。"
+      }
+    },
+    {
+      "defId": "crescent-dancer",
+      "stats": {
+        "role": "坦克",
+        "hp": 180,
+        "attack": 14,
+        "armor": 49,
+        "resistance": 32,
+        "range": 1,
+        "speed": 40,
+        "effect": "shield",
+        "skillPower": 0.182,
+        "skillSecondary": 0,
+        "skillName": "弦月护身",
+        "skillDescription": "获得最大生命 18.2% 的护盾；有盾时优先吸引 2 格内敌人。"
+      }
+    },
+    {
+      "defId": "frost-return",
+      "stats": {
+        "role": "刺客",
+        "hp": 105,
+        "attack": 28,
+        "armor": 18,
+        "resistance": 13,
+        "range": 1,
+        "speed": 90,
+        "effect": "dash",
+        "skillPower": 1.8,
+        "skillSecondary": 0,
+        "skillName": "霜桥回刃",
+        "skillDescription": "开场突入后排空格；技能造成 180% 单体物理伤害。"
+      }
+    },
+    {
+      "defId": "moon-soloist",
+      "stats": {
+        "role": "坦克",
+        "hp": 180,
+        "attack": 14,
+        "armor": 42,
+        "resistance": 35,
+        "range": 1,
+        "speed": 40,
+        "effect": "shield",
+        "skillPower": 0.221,
+        "skillSecondary": 0,
+        "skillName": "静夜铁壁",
+        "skillDescription": "获得最大生命 22.1% 的护盾；有盾时优先吸引 2 格内敌人。"
+      }
+    },
+    {
+      "defId": "eclipse-deer",
+      "stats": {
+        "role": "坦克",
+        "hp": 180,
+        "attack": 14,
+        "armor": 45,
+        "resistance": 33,
+        "range": 1,
+        "speed": 40,
+        "effect": "shield",
+        "skillPower": 0.2015,
+        "skillSecondary": 0,
+        "skillName": "月蚀长壁",
+        "skillDescription": "获得最大生命 20.15% 的护盾；有盾时优先吸引 2 格内敌人。"
+      }
+    },
+    {
+      "defId": "starlit-arch",
+      "stats": {
+        "role": "坦克",
+        "hp": 180,
+        "attack": 14,
+        "armor": 47,
+        "resistance": 38,
+        "range": 1,
+        "speed": 40,
+        "effect": "shield",
+        "skillPower": 0.1885,
+        "skillSecondary": 0,
+        "skillName": "群星坚守",
+        "skillDescription": "获得最大生命 18.85% 的护盾；有盾时优先吸引 2 格内敌人。"
+      }
+    },
+    {
+      "defId": "comet-tail",
+      "stats": {
+        "role": "坦克",
+        "hp": 180,
+        "attack": 14,
+        "armor": 43,
+        "resistance": 40,
+        "range": 1,
+        "speed": 40,
+        "effect": "shield",
+        "skillPower": 0.195,
+        "skillSecondary": 0,
+        "skillName": "彗尾折光",
+        "skillDescription": "获得最大生命 19.5% 的护盾；有盾时优先吸引 2 格内敌人。"
+      }
+    },
+    {
+      "defId": "amber-pause",
+      "stats": {
+        "role": "射手",
+        "hp": 100,
+        "attack": 24,
+        "armor": 12,
+        "resistance": 20,
+        "range": 4,
+        "speed": 78,
+        "effect": "projectile",
+        "skillPower": 0.8,
+        "skillSecondary": 0,
+        "skillName": "琥珀穿光",
+        "skillDescription": "连射两次，每次 80% 物理伤害；后排部署可狙击后排，仍需进入射程。"
+      }
+    },
+    {
+      "defId": "sun-first",
+      "stats": {
+        "role": "射手",
+        "hp": 100,
+        "attack": 24,
+        "armor": 16,
+        "resistance": 15,
+        "range": 3,
+        "speed": 78,
+        "effect": "projectile",
+        "skillPower": 0.9,
+        "skillSecondary": 0,
+        "skillName": "旭日连星",
+        "skillDescription": "连射两次，每次 90% 物理伤害；后排部署可狙击后排，仍需进入射程。"
+      }
+    },
+    {
+      "defId": "sun-center",
+      "stats": {
+        "role": "法师",
+        "hp": 95,
+        "attack": 22,
+        "armor": 12,
+        "resistance": 25,
+        "range": 3,
+        "speed": 50,
+        "effect": "blast",
+        "skillPower": 1.15,
+        "skillSecondary": 0.7,
+        "skillName": "日环涟漪",
+        "skillDescription": "目标受到 115% 法术伤害，目标周围 1 格敌人受到 70% 法术伤害。"
+      }
+    },
+    {
+      "defId": "sundial-memory",
+      "stats": {
+        "role": "射手",
+        "hp": 100,
+        "attack": 24,
+        "armor": 15,
+        "resistance": 17,
+        "range": 4,
+        "speed": 78,
+        "effect": "projectile",
+        "skillPower": 0.82,
+        "skillSecondary": 0,
+        "skillName": "日晷回射",
+        "skillDescription": "连射两次，每次 82% 物理伤害；后排部署可狙击后排，仍需进入射程。"
+      }
+    },
+    {
+      "defId": "sun-change",
+      "stats": {
+        "role": "法师",
+        "hp": 95,
+        "attack": 22,
+        "armor": 16,
+        "resistance": 25,
+        "range": 2,
+        "speed": 50,
+        "effect": "blast",
+        "skillPower": 1.2,
+        "skillSecondary": 0.7,
+        "skillName": "彩霞扩散",
+        "skillDescription": "目标受到 120% 法术伤害，目标周围 1 格敌人受到 70% 法术伤害。"
+      }
+    },
+    {
+      "defId": "solar-prism",
+      "stats": {
+        "role": "法师",
+        "hp": 95,
+        "attack": 22,
+        "armor": 12,
+        "resistance": 28,
+        "range": 3,
+        "speed": 50,
+        "effect": "blast",
+        "skillPower": 1.1,
+        "skillSecondary": 0.8,
+        "skillName": "曜石虹爆",
+        "skillDescription": "目标受到 110% 法术伤害，目标周围 1 格敌人受到 80% 法术伤害。"
+      }
+    },
+    {
+      "defId": "gold-mirror",
+      "stats": {
+        "role": "法师",
+        "hp": 95,
+        "attack": 22,
+        "armor": 15,
+        "resistance": 25,
+        "range": 3,
+        "speed": 50,
+        "effect": "blast",
+        "skillPower": 1.35,
+        "skillSecondary": 0.45,
+        "skillName": "金镜灼流",
+        "skillDescription": "目标受到 135% 法术伤害，目标周围 1 格敌人受到 45% 法术伤害。"
+      }
+    },
+    {
+      "defId": "solstice-alone",
+      "stats": {
+        "role": "法师",
+        "hp": 95,
+        "attack": 22,
+        "armor": 12,
+        "resistance": 25,
+        "range": 2,
+        "speed": 50,
+        "effect": "blast",
+        "skillPower": 1.7,
+        "skillSecondary": 0.2,
+        "skillName": "至日聚焦",
+        "skillDescription": "目标受到 170% 法术伤害，目标周围 1 格敌人受到 20% 法术伤害。"
+      }
+    },
+    {
+      "defId": "fern-opener",
+      "stats": {
+        "role": "法师",
+        "hp": 95,
+        "attack": 22,
+        "armor": 15,
+        "resistance": 25,
+        "range": 2,
+        "speed": 50,
+        "effect": "blast",
+        "skillPower": 1.35,
+        "skillSecondary": 0.6,
+        "skillName": "蕨叶穿刺",
+        "skillDescription": "目标受到 135% 法术伤害，目标周围 1 格敌人受到 60% 法术伤害。"
+      }
+    },
+    {
+      "defId": "moss-tide",
+      "stats": {
+        "role": "法师",
+        "hp": 95,
+        "attack": 22,
+        "armor": 12,
+        "resistance": 29,
+        "range": 3,
+        "speed": 50,
+        "effect": "blast",
+        "skillPower": 1.2,
+        "skillSecondary": 0.7,
+        "skillName": "苔溪涌动",
+        "skillDescription": "目标受到 120% 法术伤害，目标周围 1 格敌人受到 70% 法术伤害。"
+      }
+    },
+    {
+      "defId": "twig-change",
+      "stats": {
+        "role": "法师",
+        "hp": 95,
+        "attack": 22,
+        "armor": 12,
+        "resistance": 25,
+        "range": 4,
+        "speed": 50,
+        "effect": "blast",
+        "skillPower": 1.1,
+        "skillSecondary": 0.6,
+        "skillName": "新枝裂空",
+        "skillDescription": "目标受到 110% 法术伤害，目标周围 1 格敌人受到 60% 法术伤害。"
+      }
+    },
+    {
+      "defId": "clover-step",
+      "stats": {
+        "role": "战士",
+        "hp": 145,
+        "attack": 23,
+        "armor": 25,
+        "resistance": 20,
+        "range": 2,
+        "speed": 55,
+        "effect": "slash",
+        "skillPower": 1.2,
+        "skillSecondary": 0.65,
+        "skillName": "三叶长锋",
+        "skillDescription": "目标受到 120% 物理伤害，身旁 1 格其他敌人受到 65% 物理伤害。"
+      }
+    },
+    {
+      "defId": "seed-center",
+      "stats": {
+        "role": "法师",
+        "hp": 95,
+        "attack": 22,
+        "armor": 12,
+        "resistance": 25,
+        "range": 2,
+        "speed": 50,
+        "effect": "blast",
+        "skillPower": 1.25,
+        "skillSecondary": 0.75,
+        "skillName": "种子爆裂",
+        "skillDescription": "目标受到 125% 法术伤害，目标周围 1 格敌人受到 75% 法术伤害。"
+      }
+    },
+    {
+      "defId": "canopy-coda",
+      "stats": {
+        "role": "战士",
+        "hp": 145,
+        "attack": 23,
+        "armor": 25,
+        "resistance": 20,
+        "range": 1,
+        "speed": 55,
+        "effect": "slash",
+        "skillPower": 1.65,
+        "skillSecondary": 0.35,
+        "skillName": "树冠重斩",
+        "skillDescription": "目标受到 165% 物理伤害，身旁 1 格其他敌人受到 35% 物理伤害。"
+      }
+    },
+    {
+      "defId": "emerald-mirror",
+      "stats": {
+        "role": "战士",
+        "hp": 145,
+        "attack": 23,
+        "armor": 30,
+        "resistance": 20,
+        "range": 2,
+        "speed": 55,
+        "effect": "slash",
+        "skillPower": 1.15,
+        "skillSecondary": 0.8,
+        "skillName": "翠镜回锋",
+        "skillDescription": "目标受到 115% 物理伤害，身旁 1 格其他敌人受到 80% 物理伤害。"
+      }
+    },
+    {
+      "defId": "bough-embrace",
+      "stats": {
+        "role": "战士",
+        "hp": 145,
+        "attack": 23,
+        "armor": 31,
+        "resistance": 20,
+        "range": 1,
+        "speed": 55,
+        "effect": "slash",
+        "skillPower": 1.25,
+        "skillSecondary": 0.75,
+        "skillName": "连枝环斩",
+        "skillDescription": "目标受到 125% 物理伤害，身旁 1 格其他敌人受到 75% 物理伤害。"
+      }
+    }
+  ],
+  "economy": {
+    "ECONOMY": {
+      "singleDrawCost": 60,
+      "tenDrawCost": 600,
+      "craftCost": 180,
+      "recycleReturn": 10,
+      "starterCoins": 600
+    },
+    "QUALITY": {
+      "summonQuality": [
+        52,
+        28,
+        13,
+        5.5,
+        1.5
+      ],
+      "shopQuality": [
+        52,
+        28,
+        13,
+        5.5,
+        1.5
+      ],
+      "forge": {
+        "materials": 2,
+        "coins": [
+          60,
+          120,
+          240,
+          480
+        ],
+        "fail": [
+          10,
+          20,
+          35,
+          49.8
+        ],
+        "upgradeTwo": [
+          0.5,
+          0.4,
+          0.3,
+          0
+        ],
+        "failReturnOne": 60
+      },
+      "growth": {
+        "hp": 4,
+        "attack": 3,
+        "skill": 3
+      },
+      "shop": {
+        "price": [
+          10,
+          11,
+          13,
+          15,
+          17
+        ]
+      }
+    },
+    "LEGACY_ECONOMY": {
+      "packCost": 180,
+      "dustPerTicket": 180,
+      "dustPerDust": 1,
+      "craft": {
+        "R": 60,
+        "SR": 180,
+        "SSR": 480
+      },
+      "recycle": {
+        "R": 10,
+        "SR": 30,
+        "SSR": 80
+      },
+      "sellBase": {
+        "R": 10,
+        "SR": 20,
+        "SSR": 30
+      }
+    },
+    "LEGACY_RARITY": {
+      "moon-deer": "SSR",
+      "sun-fox": "SSR",
+      "forest-rabbit": "SR",
+      "moon-fawn": "R",
+      "sun-cub": "R",
+      "forest-sprout": "R",
+      "star-deer": "SR",
+      "golden-fox": "SR",
+      "verdant-rabbit": "SSR",
+      "mist-deer": "R",
+      "dawn-fox": "R",
+      "breeze-sprout": "SR",
+      "lunar-guide": "R",
+      "silver-gap": "R",
+      "crescent-dancer": "SR",
+      "frost-return": "SR",
+      "moon-soloist": "SR",
+      "eclipse-deer": "SSR",
+      "starlit-arch": "SSR",
+      "comet-tail": "SSR",
+      "amber-pause": "R",
+      "sun-first": "R",
+      "sun-center": "SR",
+      "sundial-memory": "SR",
+      "sun-change": "SR",
+      "solar-prism": "SSR",
+      "gold-mirror": "SSR",
+      "solstice-alone": "SSR",
+      "fern-opener": "R",
+      "moss-tide": "R",
+      "twig-change": "R",
+      "clover-step": "SR",
+      "seed-center": "SR",
+      "canopy-coda": "SSR",
+      "emerald-mirror": "SSR",
+      "bough-embrace": "SSR"
+    },
+    "LEGACY_SHOP_MULTIPLIER": [
+      1,
+      1.1,
+      1.25,
+      1.45,
+      1.7
+    ]
+  },
+  "legacyBattles": [
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "moon-deer",
+          "rank": 1,
+          "best": 0,
+          "stars": 1
+        }
+      ],
+      "seed": 0,
+      "slots": [
+        0
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "moon-deer",
+            "rank": 1,
+            "best": 0,
+            "stars": 1
+          }
+        ]
+      },
+      "expected": {
+        "hash": "bea7a588a6c2b7d4af6ff90563436f9f00a3ecc3df077d3797e2d6cbbca65603",
+        "outcome": "lost",
+        "hpPlayer": [
+          79
+        ],
+        "hpEnemy": [
+          98
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "moon-deer",
+          "rank": 1,
+          "best": 0,
+          "stars": 1
+        }
+      ],
+      "seed": 1,
+      "slots": [
+        0
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "moon-deer",
+            "rank": 1,
+            "best": 0,
+            "stars": 1
+          }
+        ]
+      },
+      "expected": {
+        "hash": "072f1db07bbdfc1d0ad28fbba6da299fa7d1a196d8cafb1afaa478f7afb3fdd7",
+        "outcome": "lost",
+        "hpPlayer": [
+          79
+        ],
+        "hpEnemy": [
+          98
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "sun-fox",
+          "rank": 2,
+          "best": 0,
+          "stars": 2
+        }
+      ],
+      "seed": 0,
+      "slots": [
+        1
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "sun-fox",
+            "rank": 2,
+            "best": 0,
+            "stars": 2
+          }
+        ]
+      },
+      "expected": {
+        "hash": "7a7843d3755fc34253f852d39928399e111355512d5630a54044d8a8a6a632b9",
+        "outcome": "lost",
+        "hpPlayer": [
+          0
+        ],
+        "hpEnemy": [
+          19
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "sun-fox",
+          "rank": 2,
+          "best": 0,
+          "stars": 2
+        }
+      ],
+      "seed": 1,
+      "slots": [
+        1
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "sun-fox",
+            "rank": 2,
+            "best": 0,
+            "stars": 2
+          }
+        ]
+      },
+      "expected": {
+        "hash": "f21ef5ae084235264d9d157e0b39389c4302b145418c5d40c7925632bdfbcdb5",
+        "outcome": "won",
+        "hpPlayer": [
+          19
+        ],
+        "hpEnemy": [
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "forest-rabbit",
+          "rank": 3,
+          "best": 0,
+          "stars": 3
+        }
+      ],
+      "seed": 0,
+      "slots": [
+        2
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "forest-rabbit",
+            "rank": 3,
+            "best": 0,
+            "stars": 3
+          }
+        ]
+      },
+      "expected": {
+        "hash": "a8093da3f191a6523b3a5db8de899d1cba64606a70d5611f2d2e2e5e5e4f9339",
+        "outcome": "lost",
+        "hpPlayer": [
+          0
+        ],
+        "hpEnemy": [
+          20
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "forest-rabbit",
+          "rank": 3,
+          "best": 0,
+          "stars": 3
+        }
+      ],
+      "seed": 1,
+      "slots": [
+        2
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "forest-rabbit",
+            "rank": 3,
+            "best": 0,
+            "stars": 3
+          }
+        ]
+      },
+      "expected": {
+        "hash": "a96a32028a1fae188e84a02a37be0877c606c55844d2a3001142ed09fc3b7f19",
+        "outcome": "lost",
+        "hpPlayer": [
+          0
+        ],
+        "hpEnemy": [
+          20
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "moon-fawn",
+          "rank": 4,
+          "best": 0,
+          "stars": 1
+        }
+      ],
+      "seed": 0,
+      "slots": [
+        3
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "moon-fawn",
+            "rank": 4,
+            "best": 0,
+            "stars": 1
+          }
+        ]
+      },
+      "expected": {
+        "hash": "c906ccdad68788ae1c44208bfe2bb0e9dfda4f608e432226f7fb95adb128b08c",
+        "outcome": "lost",
+        "hpPlayer": [
+          0
+        ],
+        "hpEnemy": [
+          12
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "moon-fawn",
+          "rank": 4,
+          "best": 0,
+          "stars": 1
+        }
+      ],
+      "seed": 1,
+      "slots": [
+        3
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "moon-fawn",
+            "rank": 4,
+            "best": 0,
+            "stars": 1
+          }
+        ]
+      },
+      "expected": {
+        "hash": "0bea8ad1d19c4c2c4f070b5af7cc8038e58022a4c1e9c4917c7f4be7cef7df59",
+        "outcome": "lost",
+        "hpPlayer": [
+          0
+        ],
+        "hpEnemy": [
+          12
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "sun-cub",
+          "rank": 5,
+          "best": 0,
+          "stars": 2
+        }
+      ],
+      "seed": 0,
+      "slots": [
+        4
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "sun-cub",
+            "rank": 5,
+            "best": 0,
+            "stars": 2
+          }
+        ]
+      },
+      "expected": {
+        "hash": "5849c991c37c55d6bbc3f873e66bc21a1dec0cc91c67e505bc9ba8cd444e4025",
+        "outcome": "lost",
+        "hpPlayer": [
+          0
+        ],
+        "hpEnemy": [
+          2
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "sun-cub",
+          "rank": 5,
+          "best": 0,
+          "stars": 2
+        }
+      ],
+      "seed": 1,
+      "slots": [
+        4
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "sun-cub",
+            "rank": 5,
+            "best": 0,
+            "stars": 2
+          }
+        ]
+      },
+      "expected": {
+        "hash": "0b61676cd3f920901a1a48c020ae287547cb6078c0c4addbc7b9d961582e4bd2",
+        "outcome": "lost",
+        "hpPlayer": [
+          0
+        ],
+        "hpEnemy": [
+          2
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "forest-sprout",
+          "rank": 1,
+          "best": 0,
+          "stars": 3
+        }
+      ],
+      "seed": 0,
+      "slots": [
+        5
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "forest-sprout",
+            "rank": 1,
+            "best": 0,
+            "stars": 3
+          }
+        ]
+      },
+      "expected": {
+        "hash": "65acbcc54396d5f2a9e06fd3555e7e15e688d87dcf7bf5d8490bfcb6b2b90409",
+        "outcome": "won",
+        "hpPlayer": [
+          2
+        ],
+        "hpEnemy": [
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "forest-sprout",
+          "rank": 1,
+          "best": 0,
+          "stars": 3
+        }
+      ],
+      "seed": 1,
+      "slots": [
+        5
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "forest-sprout",
+            "rank": 1,
+            "best": 0,
+            "stars": 3
+          }
+        ]
+      },
+      "expected": {
+        "hash": "b13e497d79ae0f62824b681cfcf89280bb1ed0a4f62cfe8877fd85d349041b7c",
+        "outcome": "won",
+        "hpPlayer": [
+          2
+        ],
+        "hpEnemy": [
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "star-deer",
+          "rank": 2,
+          "best": 0,
+          "stars": 1
+        }
+      ],
+      "seed": 0,
+      "slots": [
+        6
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "star-deer",
+            "rank": 2,
+            "best": 0,
+            "stars": 1
+          }
+        ]
+      },
+      "expected": {
+        "hash": "981c2338f2c777dd15d2deb49f8687d978a6dce87123a7885d50f70300ff9d96",
+        "outcome": "lost",
+        "hpPlayer": [
+          74
+        ],
+        "hpEnemy": [
+          97
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "star-deer",
+          "rank": 2,
+          "best": 0,
+          "stars": 1
+        }
+      ],
+      "seed": 1,
+      "slots": [
+        6
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "star-deer",
+            "rank": 2,
+            "best": 0,
+            "stars": 1
+          }
+        ]
+      },
+      "expected": {
+        "hash": "169d57b76a6c5fb74243179f2d9b5ad1e9e25472ef6072d7eb3ba3149268c021",
+        "outcome": "lost",
+        "hpPlayer": [
+          74
+        ],
+        "hpEnemy": [
+          97
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "golden-fox",
+          "rank": 3,
+          "best": 0,
+          "stars": 2
+        }
+      ],
+      "seed": 0,
+      "slots": [
+        7
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "golden-fox",
+            "rank": 3,
+            "best": 0,
+            "stars": 2
+          }
+        ]
+      },
+      "expected": {
+        "hash": "9a2014fc3f37aa03ffef7d020d50b18a06370c811270510ce556578039a82056",
+        "outcome": "lost",
+        "hpPlayer": [
+          0
+        ],
+        "hpEnemy": [
+          18
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "golden-fox",
+          "rank": 3,
+          "best": 0,
+          "stars": 2
+        }
+      ],
+      "seed": 1,
+      "slots": [
+        7
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "golden-fox",
+            "rank": 3,
+            "best": 0,
+            "stars": 2
+          }
+        ]
+      },
+      "expected": {
+        "hash": "cd4d727ae3ff5f2b6e901a69f5d98658a9c0f2e571792636a05c8d8108215dde",
+        "outcome": "lost",
+        "hpPlayer": [
+          0
+        ],
+        "hpEnemy": [
+          18
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "verdant-rabbit",
+          "rank": 4,
+          "best": 0,
+          "stars": 3
+        }
+      ],
+      "seed": 0,
+      "slots": [
+        8
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "verdant-rabbit",
+            "rank": 4,
+            "best": 0,
+            "stars": 3
+          }
+        ]
+      },
+      "expected": {
+        "hash": "feae5d32238ae956063e2b632d4085494d0f3088a543e04c86ccf16e0a3eba0f",
+        "outcome": "won",
+        "hpPlayer": [
+          1
+        ],
+        "hpEnemy": [
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "verdant-rabbit",
+          "rank": 4,
+          "best": 0,
+          "stars": 3
+        }
+      ],
+      "seed": 1,
+      "slots": [
+        8
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "verdant-rabbit",
+            "rank": 4,
+            "best": 0,
+            "stars": 3
+          }
+        ]
+      },
+      "expected": {
+        "hash": "1a99864a536efdfe410ba9a749a70051f0856f9c6d8c4ffdcc5e56816e8def08",
+        "outcome": "won",
+        "hpPlayer": [
+          1
+        ],
+        "hpEnemy": [
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "mist-deer",
+          "rank": 5,
+          "best": 0,
+          "stars": 1
+        }
+      ],
+      "seed": 0,
+      "slots": [
+        9
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "mist-deer",
+            "rank": 5,
+            "best": 0,
+            "stars": 1
+          }
+        ]
+      },
+      "expected": {
+        "hash": "ffded34101c7f3f7d94b468b690ce7b5719848ad651bd1cd040a4688043de41a",
+        "outcome": "lost",
+        "hpPlayer": [
+          0
+        ],
+        "hpEnemy": [
+          8
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "mist-deer",
+          "rank": 5,
+          "best": 0,
+          "stars": 1
+        }
+      ],
+      "seed": 1,
+      "slots": [
+        9
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "mist-deer",
+            "rank": 5,
+            "best": 0,
+            "stars": 1
+          }
+        ]
+      },
+      "expected": {
+        "hash": "077b8fee09e30f6ecff4220948fbdeeec6c6846dcab0a23be16997d012ca3e6b",
+        "outcome": "lost",
+        "hpPlayer": [
+          0
+        ],
+        "hpEnemy": [
+          8
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "dawn-fox",
+          "rank": 1,
+          "best": 0,
+          "stars": 2
+        }
+      ],
+      "seed": 0,
+      "slots": [
+        10
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "dawn-fox",
+            "rank": 1,
+            "best": 0,
+            "stars": 2
+          }
+        ]
+      },
+      "expected": {
+        "hash": "0a7d4a973b958a954e0f1c8d22a4b1d07f30a8f02ae37eb472db7335eec166dc",
+        "outcome": "lost",
+        "hpPlayer": [
+          0
+        ],
+        "hpEnemy": [
+          22
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "dawn-fox",
+          "rank": 1,
+          "best": 0,
+          "stars": 2
+        }
+      ],
+      "seed": 1,
+      "slots": [
+        10
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "dawn-fox",
+            "rank": 1,
+            "best": 0,
+            "stars": 2
+          }
+        ]
+      },
+      "expected": {
+        "hash": "700c9c0af9aee3a4530028dddb2772d672a837c6595a2fa1cbbb4e7094c60220",
+        "outcome": "lost",
+        "hpPlayer": [
+          0
+        ],
+        "hpEnemy": [
+          22
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "breeze-sprout",
+          "rank": 2,
+          "best": 0,
+          "stars": 3
+        }
+      ],
+      "seed": 0,
+      "slots": [
+        11
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "breeze-sprout",
+            "rank": 2,
+            "best": 0,
+            "stars": 3
+          }
+        ]
+      },
+      "expected": {
+        "hash": "34723bc2f06d4741ea9b946ffb0cbabd3795620626f94717d4a4eb053b9fa112",
+        "outcome": "lost",
+        "hpPlayer": [
+          0
+        ],
+        "hpEnemy": [
+          6
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "breeze-sprout",
+          "rank": 2,
+          "best": 0,
+          "stars": 3
+        }
+      ],
+      "seed": 1,
+      "slots": [
+        11
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "breeze-sprout",
+            "rank": 2,
+            "best": 0,
+            "stars": 3
+          }
+        ]
+      },
+      "expected": {
+        "hash": "4d8852a9badd02ee0ed1ad8e6e8477538a4a1b92e38ca49b3cff967b4be17db0",
+        "outcome": "lost",
+        "hpPlayer": [
+          0
+        ],
+        "hpEnemy": [
+          6
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "lunar-guide",
+          "rank": 3,
+          "best": 0,
+          "stars": 1
+        }
+      ],
+      "seed": 0,
+      "slots": [
+        12
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "lunar-guide",
+            "rank": 3,
+            "best": 0,
+            "stars": 1
+          }
+        ]
+      },
+      "expected": {
+        "hash": "340f5f9d999422ce97fa3628392cc8eca7eb06977221c83dca77fc566953533d",
+        "outcome": "lost",
+        "hpPlayer": [
+          0
+        ],
+        "hpEnemy": [
+          13
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "lunar-guide",
+          "rank": 3,
+          "best": 0,
+          "stars": 1
+        }
+      ],
+      "seed": 1,
+      "slots": [
+        12
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "lunar-guide",
+            "rank": 3,
+            "best": 0,
+            "stars": 1
+          }
+        ]
+      },
+      "expected": {
+        "hash": "72fd427862fbcc53091f2a839622eb1297d0363a77f12ef650f789c2f43cd9bb",
+        "outcome": "lost",
+        "hpPlayer": [
+          0
+        ],
+        "hpEnemy": [
+          13
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "silver-gap",
+          "rank": 4,
+          "best": 0,
+          "stars": 2
+        }
+      ],
+      "seed": 0,
+      "slots": [
+        13
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "silver-gap",
+            "rank": 4,
+            "best": 0,
+            "stars": 2
+          }
+        ]
+      },
+      "expected": {
+        "hash": "a05cfbcc4c8f10744eeb1a1e865473a50b2855c147c7284f506432030cd039c2",
+        "outcome": "lost",
+        "hpPlayer": [
+          0
+        ],
+        "hpEnemy": [
+          11
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "silver-gap",
+          "rank": 4,
+          "best": 0,
+          "stars": 2
+        }
+      ],
+      "seed": 1,
+      "slots": [
+        13
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "silver-gap",
+            "rank": 4,
+            "best": 0,
+            "stars": 2
+          }
+        ]
+      },
+      "expected": {
+        "hash": "2f8f5fa951eea6e4a60ffc163d4032be2c71061eaae1d00237447753cc8bb280",
+        "outcome": "lost",
+        "hpPlayer": [
+          0
+        ],
+        "hpEnemy": [
+          11
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "crescent-dancer",
+          "rank": 5,
+          "best": 0,
+          "stars": 3
+        }
+      ],
+      "seed": 0,
+      "slots": [
+        14
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "crescent-dancer",
+            "rank": 5,
+            "best": 0,
+            "stars": 3
+          }
+        ]
+      },
+      "expected": {
+        "hash": "408ffe35b98e734c15aa4bb1df8305e07b06d4ae0f6b276fc5249ebc185ddd1e",
+        "outcome": "lost",
+        "hpPlayer": [
+          194
+        ],
+        "hpEnemy": [
+          194
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "crescent-dancer",
+          "rank": 5,
+          "best": 0,
+          "stars": 3
+        }
+      ],
+      "seed": 1,
+      "slots": [
+        14
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "crescent-dancer",
+            "rank": 5,
+            "best": 0,
+            "stars": 3
+          }
+        ]
+      },
+      "expected": {
+        "hash": "24f360fa1d01377f75d2906e22987fe9681e2a9e297f664104376b44944cceb2",
+        "outcome": "lost",
+        "hpPlayer": [
+          194
+        ],
+        "hpEnemy": [
+          194
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "frost-return",
+          "rank": 1,
+          "best": 0,
+          "stars": 1
+        }
+      ],
+      "seed": 0,
+      "slots": [
+        15
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "frost-return",
+            "rank": 1,
+            "best": 0,
+            "stars": 1
+          }
+        ]
+      },
+      "expected": {
+        "hash": "7feab421b7fde48077b353dd387a53705b090ffbd81d6437472302a1b102466e",
+        "outcome": "lost",
+        "hpPlayer": [
+          0
+        ],
+        "hpEnemy": [
+          14
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "frost-return",
+          "rank": 1,
+          "best": 0,
+          "stars": 1
+        }
+      ],
+      "seed": 1,
+      "slots": [
+        15
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "frost-return",
+            "rank": 1,
+            "best": 0,
+            "stars": 1
+          }
+        ]
+      },
+      "expected": {
+        "hash": "be261ad25e8768b08ed13ec229263df71537e32c293c8e4e19e8d59b916ade1d",
+        "outcome": "lost",
+        "hpPlayer": [
+          0
+        ],
+        "hpEnemy": [
+          14
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "moon-soloist",
+          "rank": 2,
+          "best": 0,
+          "stars": 2
+        }
+      ],
+      "seed": 0,
+      "slots": [
+        16
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "moon-soloist",
+            "rank": 2,
+            "best": 0,
+            "stars": 2
+          }
+        ]
+      },
+      "expected": {
+        "hash": "03f23cd1cc6d3a3295458e9100b3fe95ca8caa31b24e982d660193229d542f22",
+        "outcome": "lost",
+        "hpPlayer": [
+          151
+        ],
+        "hpEnemy": [
+          151
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "moon-soloist",
+          "rank": 2,
+          "best": 0,
+          "stars": 2
+        }
+      ],
+      "seed": 1,
+      "slots": [
+        16
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "moon-soloist",
+            "rank": 2,
+            "best": 0,
+            "stars": 2
+          }
+        ]
+      },
+      "expected": {
+        "hash": "73ebfb5970515d6a00bc17577d9c3d98583f5edd54094c3d09b6c4640f89e741",
+        "outcome": "lost",
+        "hpPlayer": [
+          151
+        ],
+        "hpEnemy": [
+          151
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "eclipse-deer",
+          "rank": 3,
+          "best": 0,
+          "stars": 3
+        }
+      ],
+      "seed": 0,
+      "slots": [
+        17
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "eclipse-deer",
+            "rank": 3,
+            "best": 0,
+            "stars": 3
+          }
+        ]
+      },
+      "expected": {
+        "hash": "87e8ae56261098a4788685273c006dbfa478d23b283d65f6186314ed28b3568f",
+        "outcome": "lost",
+        "hpPlayer": [
+          172
+        ],
+        "hpEnemy": [
+          172
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "eclipse-deer",
+          "rank": 3,
+          "best": 0,
+          "stars": 3
+        }
+      ],
+      "seed": 1,
+      "slots": [
+        17
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "eclipse-deer",
+            "rank": 3,
+            "best": 0,
+            "stars": 3
+          }
+        ]
+      },
+      "expected": {
+        "hash": "92ca031a75ee6f81c9b479b0b24d629bf779e4128e4aa90f05d189adf2303623",
+        "outcome": "lost",
+        "hpPlayer": [
+          172
+        ],
+        "hpEnemy": [
+          172
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "starlit-arch",
+          "rank": 4,
+          "best": 0,
+          "stars": 1
+        }
+      ],
+      "seed": 0,
+      "slots": [
+        18
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "starlit-arch",
+            "rank": 4,
+            "best": 0,
+            "stars": 1
+          }
+        ]
+      },
+      "expected": {
+        "hash": "4fcdc0f0b84c1e6a598bbc6519517db3a99d3478ca94c5cca7af446bfe36a22f",
+        "outcome": "won",
+        "hpPlayer": [
+          144
+        ],
+        "hpEnemy": [
+          121
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "starlit-arch",
+          "rank": 4,
+          "best": 0,
+          "stars": 1
+        }
+      ],
+      "seed": 1,
+      "slots": [
+        18
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "starlit-arch",
+            "rank": 4,
+            "best": 0,
+            "stars": 1
+          }
+        ]
+      },
+      "expected": {
+        "hash": "24aa4cbdd598cef8aa742c46c3a095db7110544a1903d22145dd28ba0b8cfe94",
+        "outcome": "won",
+        "hpPlayer": [
+          144
+        ],
+        "hpEnemy": [
+          121
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "comet-tail",
+          "rank": 5,
+          "best": 0,
+          "stars": 2
+        }
+      ],
+      "seed": 0,
+      "slots": [
+        19
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "comet-tail",
+            "rank": 5,
+            "best": 0,
+            "stars": 2
+          }
+        ]
+      },
+      "expected": {
+        "hash": "aabff366466140471d33d1d2dc41d176a4b95bf7ad1b67b4a8cbb889ed2040f2",
+        "outcome": "lost",
+        "hpPlayer": [
+          145
+        ],
+        "hpEnemy": [
+          172
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "comet-tail",
+          "rank": 5,
+          "best": 0,
+          "stars": 2
+        }
+      ],
+      "seed": 1,
+      "slots": [
+        19
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "comet-tail",
+            "rank": 5,
+            "best": 0,
+            "stars": 2
+          }
+        ]
+      },
+      "expected": {
+        "hash": "933f860d319b03695d2664610026a73f1efdde1961a2baaf0deaa6fab54c8faa",
+        "outcome": "lost",
+        "hpPlayer": [
+          145
+        ],
+        "hpEnemy": [
+          172
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "amber-pause",
+          "rank": 1,
+          "best": 0,
+          "stars": 3
+        }
+      ],
+      "seed": 0,
+      "slots": [
+        20
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "amber-pause",
+            "rank": 1,
+            "best": 0,
+            "stars": 3
+          }
+        ]
+      },
+      "expected": {
+        "hash": "6f48e0126dc6cad761137bf242862c0483b13ce905bafc92cc57b80c95861b55",
+        "outcome": "lost",
+        "hpPlayer": [
+          0
+        ],
+        "hpEnemy": [
+          9
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "amber-pause",
+          "rank": 1,
+          "best": 0,
+          "stars": 3
+        }
+      ],
+      "seed": 1,
+      "slots": [
+        20
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "amber-pause",
+            "rank": 1,
+            "best": 0,
+            "stars": 3
+          }
+        ]
+      },
+      "expected": {
+        "hash": "2da1d0d4d91feb943b5f81a3505bf4b227b18bccd184c2ff3c0bf7d20be32b67",
+        "outcome": "lost",
+        "hpPlayer": [
+          0
+        ],
+        "hpEnemy": [
+          9
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "sun-first",
+          "rank": 2,
+          "best": 0,
+          "stars": 1
+        }
+      ],
+      "seed": 0,
+      "slots": [
+        21
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "sun-first",
+            "rank": 2,
+            "best": 0,
+            "stars": 1
+          }
+        ]
+      },
+      "expected": {
+        "hash": "00c756f37de63d75e91b25ed250c81baca0f6d952b1131aff258325907ddfb4e",
+        "outcome": "won",
+        "hpPlayer": [
+          1
+        ],
+        "hpEnemy": [
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "sun-first",
+          "rank": 2,
+          "best": 0,
+          "stars": 1
+        }
+      ],
+      "seed": 1,
+      "slots": [
+        21
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "sun-first",
+            "rank": 2,
+            "best": 0,
+            "stars": 1
+          }
+        ]
+      },
+      "expected": {
+        "hash": "0cdbefb3a54d28a8a625eca8e49d16257687194386b130d27852ad583bd32b88",
+        "outcome": "won",
+        "hpPlayer": [
+          1
+        ],
+        "hpEnemy": [
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "sun-center",
+          "rank": 3,
+          "best": 0,
+          "stars": 2
+        }
+      ],
+      "seed": 0,
+      "slots": [
+        22
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "sun-center",
+            "rank": 3,
+            "best": 0,
+            "stars": 2
+          }
+        ]
+      },
+      "expected": {
+        "hash": "315dc6b5332f1435fc9ae3c3526a047fdaa24a126554843523b10526bb614a93",
+        "outcome": "won",
+        "hpPlayer": [
+          21
+        ],
+        "hpEnemy": [
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "sun-center",
+          "rank": 3,
+          "best": 0,
+          "stars": 2
+        }
+      ],
+      "seed": 1,
+      "slots": [
+        22
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "sun-center",
+            "rank": 3,
+            "best": 0,
+            "stars": 2
+          }
+        ]
+      },
+      "expected": {
+        "hash": "b59ae79d8a65638ace153fe201a7a1a7601c53d03d7a6382ab36b41748167d05",
+        "outcome": "won",
+        "hpPlayer": [
+          21
+        ],
+        "hpEnemy": [
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "sundial-memory",
+          "rank": 4,
+          "best": 0,
+          "stars": 3
+        }
+      ],
+      "seed": 0,
+      "slots": [
+        23
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "sundial-memory",
+            "rank": 4,
+            "best": 0,
+            "stars": 3
+          }
+        ]
+      },
+      "expected": {
+        "hash": "8a6eda8a8a7f4596048297ace749e4972a7394c851fc40faccf5cab58598c5ce",
+        "outcome": "lost",
+        "hpPlayer": [
+          0
+        ],
+        "hpEnemy": [
+          13
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "sundial-memory",
+          "rank": 4,
+          "best": 0,
+          "stars": 3
+        }
+      ],
+      "seed": 1,
+      "slots": [
+        23
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "sundial-memory",
+            "rank": 4,
+            "best": 0,
+            "stars": 3
+          }
+        ]
+      },
+      "expected": {
+        "hash": "6478d0ec2590c2b37730f9708557ab79a6b4f4dfdf95c0352fdf52001435df2f",
+        "outcome": "lost",
+        "hpPlayer": [
+          0
+        ],
+        "hpEnemy": [
+          13
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "sun-change",
+          "rank": 5,
+          "best": 0,
+          "stars": 1
+        }
+      ],
+      "seed": 0,
+      "slots": [
+        24
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "sun-change",
+            "rank": 5,
+            "best": 0,
+            "stars": 1
+          }
+        ]
+      },
+      "expected": {
+        "hash": "d9ea4f5a8542706f154f31fa6fb18fd0595aab11c6a02af659f5cf8c3c750335",
+        "outcome": "lost",
+        "hpPlayer": [
+          0
+        ],
+        "hpEnemy": [
+          21
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "sun-change",
+          "rank": 5,
+          "best": 0,
+          "stars": 1
+        }
+      ],
+      "seed": 1,
+      "slots": [
+        24
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "sun-change",
+            "rank": 5,
+            "best": 0,
+            "stars": 1
+          }
+        ]
+      },
+      "expected": {
+        "hash": "fa4bb9c81e76be1e92faa5c639ba17f6f13b6fbf7f0d71a610123af004ed5297",
+        "outcome": "lost",
+        "hpPlayer": [
+          0
+        ],
+        "hpEnemy": [
+          21
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "solar-prism",
+          "rank": 1,
+          "best": 0,
+          "stars": 2
+        }
+      ],
+      "seed": 0,
+      "slots": [
+        25
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "solar-prism",
+            "rank": 1,
+            "best": 0,
+            "stars": 2
+          }
+        ]
+      },
+      "expected": {
+        "hash": "7a3012aa2cc56db393972314a686bf5c59679e200783cb61d9e6756ed69e2dc0",
+        "outcome": "lost",
+        "hpPlayer": [
+          0
+        ],
+        "hpEnemy": [
+          2
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "solar-prism",
+          "rank": 1,
+          "best": 0,
+          "stars": 2
+        }
+      ],
+      "seed": 1,
+      "slots": [
+        25
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "solar-prism",
+            "rank": 1,
+            "best": 0,
+            "stars": 2
+          }
+        ]
+      },
+      "expected": {
+        "hash": "c8a904e304f453349829eb664dc18cd24e77a316f701a9aed1ed333656f1c7d4",
+        "outcome": "lost",
+        "hpPlayer": [
+          0
+        ],
+        "hpEnemy": [
+          2
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "gold-mirror",
+          "rank": 2,
+          "best": 0,
+          "stars": 3
+        }
+      ],
+      "seed": 0,
+      "slots": [
+        26
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "gold-mirror",
+            "rank": 2,
+            "best": 0,
+            "stars": 3
+          }
+        ]
+      },
+      "expected": {
+        "hash": "7fc2c0049653c95e9b9f623c1cb7e2ac1902f4d53502c5d93c5bab6c9a02e7a0",
+        "outcome": "won",
+        "hpPlayer": [
+          2
+        ],
+        "hpEnemy": [
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "gold-mirror",
+          "rank": 2,
+          "best": 0,
+          "stars": 3
+        }
+      ],
+      "seed": 1,
+      "slots": [
+        26
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "gold-mirror",
+            "rank": 2,
+            "best": 0,
+            "stars": 3
+          }
+        ]
+      },
+      "expected": {
+        "hash": "d5f880a2b251a583cf37ae9328e66f47a951dda4e1674ac3c9e1bf6d2f20a372",
+        "outcome": "won",
+        "hpPlayer": [
+          2
+        ],
+        "hpEnemy": [
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "solstice-alone",
+          "rank": 3,
+          "best": 0,
+          "stars": 1
+        }
+      ],
+      "seed": 0,
+      "slots": [
+        27
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "solstice-alone",
+            "rank": 3,
+            "best": 0,
+            "stars": 1
+          }
+        ]
+      },
+      "expected": {
+        "hash": "4f1bcd70b8d9c1ed558f449515547e0980595636519468d077af3270372bab42",
+        "outcome": "won",
+        "hpPlayer": [
+          6
+        ],
+        "hpEnemy": [
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "solstice-alone",
+          "rank": 3,
+          "best": 0,
+          "stars": 1
+        }
+      ],
+      "seed": 1,
+      "slots": [
+        27
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "solstice-alone",
+            "rank": 3,
+            "best": 0,
+            "stars": 1
+          }
+        ]
+      },
+      "expected": {
+        "hash": "5c614d1225661121da3c8c7a5e090096a999ae96ebadea8901d6a15995106b6e",
+        "outcome": "won",
+        "hpPlayer": [
+          6
+        ],
+        "hpEnemy": [
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "fern-opener",
+          "rank": 4,
+          "best": 0,
+          "stars": 2
+        }
+      ],
+      "seed": 0,
+      "slots": [
+        0
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "fern-opener",
+            "rank": 4,
+            "best": 0,
+            "stars": 2
+          }
+        ]
+      },
+      "expected": {
+        "hash": "405981a6a94b74e1b936c2da44af6c05ff45ad6ee0bdd11e4e555e69e77d4a55",
+        "outcome": "won",
+        "hpPlayer": [
+          20
+        ],
+        "hpEnemy": [
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "fern-opener",
+          "rank": 4,
+          "best": 0,
+          "stars": 2
+        }
+      ],
+      "seed": 1,
+      "slots": [
+        0
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "fern-opener",
+            "rank": 4,
+            "best": 0,
+            "stars": 2
+          }
+        ]
+      },
+      "expected": {
+        "hash": "776c082b7418bc68a92508a00ffebbcc405a5d650965cfd0fba87ae9a6e5db55",
+        "outcome": "won",
+        "hpPlayer": [
+          20
+        ],
+        "hpEnemy": [
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "moss-tide",
+          "rank": 5,
+          "best": 0,
+          "stars": 3
+        }
+      ],
+      "seed": 0,
+      "slots": [
+        1
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "moss-tide",
+            "rank": 5,
+            "best": 0,
+            "stars": 3
+          }
+        ]
+      },
+      "expected": {
+        "hash": "f36dbe5437d4416f64e82ac2384b2dba569e957a853eac3c8c08844878f294db",
+        "outcome": "won",
+        "hpPlayer": [
+          3
+        ],
+        "hpEnemy": [
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "moss-tide",
+          "rank": 5,
+          "best": 0,
+          "stars": 3
+        }
+      ],
+      "seed": 1,
+      "slots": [
+        1
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "moss-tide",
+            "rank": 5,
+            "best": 0,
+            "stars": 3
+          }
+        ]
+      },
+      "expected": {
+        "hash": "a81d783b731ae5782c9a6419f62a93c3d26c035792459e3f2c7e9de0c6d62c79",
+        "outcome": "lost",
+        "hpPlayer": [
+          0
+        ],
+        "hpEnemy": [
+          3
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "twig-change",
+          "rank": 1,
+          "best": 0,
+          "stars": 1
+        }
+      ],
+      "seed": 0,
+      "slots": [
+        2
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "twig-change",
+            "rank": 1,
+            "best": 0,
+            "stars": 1
+          }
+        ]
+      },
+      "expected": {
+        "hash": "490efe9bc92d261f6f0f196808639559ab17cdab77cdd2f3f3943aed4d055afe",
+        "outcome": "lost",
+        "hpPlayer": [
+          0
+        ],
+        "hpEnemy": [
+          16
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "twig-change",
+          "rank": 1,
+          "best": 0,
+          "stars": 1
+        }
+      ],
+      "seed": 1,
+      "slots": [
+        2
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "twig-change",
+            "rank": 1,
+            "best": 0,
+            "stars": 1
+          }
+        ]
+      },
+      "expected": {
+        "hash": "5f2000939b0a54aff303712e9b2519fec491a6911aa4f6293ebc1c21232dfa85",
+        "outcome": "lost",
+        "hpPlayer": [
+          0
+        ],
+        "hpEnemy": [
+          16
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "clover-step",
+          "rank": 2,
+          "best": 0,
+          "stars": 2
+        }
+      ],
+      "seed": 0,
+      "slots": [
+        3
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "clover-step",
+            "rank": 2,
+            "best": 0,
+            "stars": 2
+          }
+        ]
+      },
+      "expected": {
+        "hash": "c7b0d1481ed13c19200bcbb12a2c64f7d57374848837fd2af5dce0b0e18db14e",
+        "outcome": "lost",
+        "hpPlayer": [
+          0
+        ],
+        "hpEnemy": [
+          19
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "clover-step",
+          "rank": 2,
+          "best": 0,
+          "stars": 2
+        }
+      ],
+      "seed": 1,
+      "slots": [
+        3
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "clover-step",
+            "rank": 2,
+            "best": 0,
+            "stars": 2
+          }
+        ]
+      },
+      "expected": {
+        "hash": "5ca981cc1df31e970b6074adc2a62a4558c8c7b1b29dab93af7575c94a3e3a1b",
+        "outcome": "lost",
+        "hpPlayer": [
+          0
+        ],
+        "hpEnemy": [
+          19
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "seed-center",
+          "rank": 3,
+          "best": 0,
+          "stars": 3
+        }
+      ],
+      "seed": 0,
+      "slots": [
+        4
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "seed-center",
+            "rank": 3,
+            "best": 0,
+            "stars": 3
+          }
+        ]
+      },
+      "expected": {
+        "hash": "7e4e8a6db31923704c9d8e3a0fd81d1f2d029d2c735bb613e4fc2edf54c4db78",
+        "outcome": "won",
+        "hpPlayer": [
+          2
+        ],
+        "hpEnemy": [
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "seed-center",
+          "rank": 3,
+          "best": 0,
+          "stars": 3
+        }
+      ],
+      "seed": 1,
+      "slots": [
+        4
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "seed-center",
+            "rank": 3,
+            "best": 0,
+            "stars": 3
+          }
+        ]
+      },
+      "expected": {
+        "hash": "8a14c874904dbf0adf26fab4c19957323bc841b92c88ab8b40350e739fea0555",
+        "outcome": "won",
+        "hpPlayer": [
+          2
+        ],
+        "hpEnemy": [
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "canopy-coda",
+          "rank": 4,
+          "best": 0,
+          "stars": 1
+        }
+      ],
+      "seed": 0,
+      "slots": [
+        5
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "canopy-coda",
+            "rank": 4,
+            "best": 0,
+            "stars": 1
+          }
+        ]
+      },
+      "expected": {
+        "hash": "2b594e53e8371d2b177558efb010884b7b2de8068b6498cdaf7c50e0be5ae33c",
+        "outcome": "won",
+        "hpPlayer": [
+          10
+        ],
+        "hpEnemy": [
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "canopy-coda",
+          "rank": 4,
+          "best": 0,
+          "stars": 1
+        }
+      ],
+      "seed": 1,
+      "slots": [
+        5
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "canopy-coda",
+            "rank": 4,
+            "best": 0,
+            "stars": 1
+          }
+        ]
+      },
+      "expected": {
+        "hash": "1a5135a17784a11f13f97244cc27a7cc30bf4525a7ff261397e708c1ff2409fe",
+        "outcome": "won",
+        "hpPlayer": [
+          10
+        ],
+        "hpEnemy": [
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "emerald-mirror",
+          "rank": 5,
+          "best": 0,
+          "stars": 2
+        }
+      ],
+      "seed": 0,
+      "slots": [
+        6
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "emerald-mirror",
+            "rank": 5,
+            "best": 0,
+            "stars": 2
+          }
+        ]
+      },
+      "expected": {
+        "hash": "898b99be369ff99b5339072c5dcb416baea5f767b6d83ac9be950753579e5128",
+        "outcome": "won",
+        "hpPlayer": [
+          6
+        ],
+        "hpEnemy": [
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "emerald-mirror",
+          "rank": 5,
+          "best": 0,
+          "stars": 2
+        }
+      ],
+      "seed": 1,
+      "slots": [
+        6
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "emerald-mirror",
+            "rank": 5,
+            "best": 0,
+            "stars": 2
+          }
+        ]
+      },
+      "expected": {
+        "hash": "bbcdaa7fe3dc50560b222ffde628359cdce151f33d85b95cf72edcc62737eea9",
+        "outcome": "won",
+        "hpPlayer": [
+          6
+        ],
+        "hpEnemy": [
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "bough-embrace",
+          "rank": 1,
+          "best": 0,
+          "stars": 3
+        }
+      ],
+      "seed": 0,
+      "slots": [
+        7
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "bough-embrace",
+            "rank": 1,
+            "best": 0,
+            "stars": 3
+          }
+        ]
+      },
+      "expected": {
+        "hash": "6904230a26f690e022405ad52cdf353b8a8414136df63f30b1a1d32b3a6ec269",
+        "outcome": "won",
+        "hpPlayer": [
+          10
+        ],
+        "hpEnemy": [
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "bough-embrace",
+          "rank": 1,
+          "best": 0,
+          "stars": 3
+        }
+      ],
+      "seed": 1,
+      "slots": [
+        7
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyTeam": [
+          {
+            "uid": "p0",
+            "defId": "bough-embrace",
+            "rank": 1,
+            "best": 0,
+            "stars": 3
+          }
+        ]
+      },
+      "expected": {
+        "hash": "9d61ea1e22279d504ec79c490bd619fa7afef9d486d28b2b4c2e685826e41d19",
+        "outcome": "won",
+        "hpPlayer": [
+          10
+        ],
+        "hpEnemy": [
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "sun-fox",
+          "rank": 2,
+          "best": 0,
+          "stars": 2
+        },
+        {
+          "uid": "p1",
+          "defId": "star-deer",
+          "rank": 3,
+          "best": 0,
+          "stars": 3
+        }
+      ],
+      "seed": 2654435769,
+      "slots": [
+        1,
+        3
+      ],
+      "options": {
+        "enemyCount": 2,
+        "enemyRank": 3
+      },
+      "expected": {
+        "hash": "b7bd4fee1238b195c4ee96e041ebac11277622e26c6cedeacae0a4f3b52d0643",
+        "outcome": "won",
+        "hpPlayer": [
+          25,
+          102
+        ],
+        "hpEnemy": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "forest-rabbit",
+          "rank": 3,
+          "best": 0,
+          "stars": 3
+        },
+        {
+          "uid": "p1",
+          "defId": "golden-fox",
+          "rank": 4,
+          "best": 0,
+          "stars": 1
+        },
+        {
+          "uid": "p2",
+          "defId": "lunar-guide",
+          "rank": 5,
+          "best": 0,
+          "stars": 2
+        }
+      ],
+      "seed": 1013904242,
+      "slots": [
+        1,
+        3,
+        5
+      ],
+      "options": {
+        "enemyCount": 3,
+        "enemyRank": 3
+      },
+      "expected": {
+        "hash": "9de8aed38b0eee40c3550857fe9c8d3ca1742be70099cfe093175405ca136d4d",
+        "outcome": "won",
+        "hpPlayer": [
+          97,
+          0,
+          136
+        ],
+        "hpEnemy": [
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "moon-fawn",
+          "rank": 4,
+          "best": 0,
+          "stars": 1
+        },
+        {
+          "uid": "p1",
+          "defId": "verdant-rabbit",
+          "rank": 5,
+          "best": 0,
+          "stars": 2
+        },
+        {
+          "uid": "p2",
+          "defId": "silver-gap",
+          "rank": 1,
+          "best": 0,
+          "stars": 3
+        },
+        {
+          "uid": "p3",
+          "defId": "starlit-arch",
+          "rank": 2,
+          "best": 0,
+          "stars": 1
+        }
+      ],
+      "seed": 3668340011,
+      "slots": [
+        1,
+        3,
+        5,
+        22
+      ],
+      "options": {
+        "enemyCount": 4,
+        "enemyRank": 3
+      },
+      "expected": {
+        "hash": "66a6c68c669efa2a1550b4f8e41650db17b890a8994fa03df1f66ccffcd0ade7",
+        "outcome": "won",
+        "hpPlayer": [
+          34,
+          0,
+          123,
+          0
+        ],
+        "hpEnemy": [
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "sun-cub",
+          "rank": 5,
+          "best": 0,
+          "stars": 2
+        },
+        {
+          "uid": "p1",
+          "defId": "mist-deer",
+          "rank": 1,
+          "best": 0,
+          "stars": 3
+        },
+        {
+          "uid": "p2",
+          "defId": "crescent-dancer",
+          "rank": 2,
+          "best": 0,
+          "stars": 1
+        },
+        {
+          "uid": "p3",
+          "defId": "comet-tail",
+          "rank": 3,
+          "best": 0,
+          "stars": 2
+        },
+        {
+          "uid": "p4",
+          "defId": "sun-change",
+          "rank": 4,
+          "best": 0,
+          "stars": 3
+        }
+      ],
+      "seed": 2027808484,
+      "slots": [
+        1,
+        3,
+        5,
+        22,
+        24
+      ],
+      "options": {
+        "enemyCount": 5,
+        "enemyRank": 3
+      },
+      "expected": {
+        "hash": "6c534c463b34481d9b79ac6ea103a974d6f7f27d42bd6a8dfdc888832f9a4d60",
+        "outcome": "won",
+        "hpPlayer": [
+          45,
+          0,
+          144,
+          152,
+          122
+        ],
+        "hpEnemy": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "forest-sprout",
+          "rank": 1,
+          "best": 0,
+          "stars": 3
+        },
+        {
+          "uid": "p1",
+          "defId": "dawn-fox",
+          "rank": 2,
+          "best": 0,
+          "stars": 1
+        },
+        {
+          "uid": "p2",
+          "defId": "frost-return",
+          "rank": 3,
+          "best": 0,
+          "stars": 2
+        },
+        {
+          "uid": "p3",
+          "defId": "amber-pause",
+          "rank": 4,
+          "best": 0,
+          "stars": 3
+        },
+        {
+          "uid": "p4",
+          "defId": "solar-prism",
+          "rank": 5,
+          "best": 0,
+          "stars": 1
+        },
+        {
+          "uid": "p5",
+          "defId": "twig-change",
+          "rank": 1,
+          "best": 0,
+          "stars": 2
+        }
+      ],
+      "seed": 387276957,
+      "slots": [
+        1,
+        3,
+        5,
+        22,
+        24,
+        26
+      ],
+      "options": {
+        "enemyCount": 6,
+        "enemyRank": 3
+      },
+      "expected": {
+        "hash": "3690607d6f5cd46ed340ff358ea04b992af07609b8af7c9a977ac20fefb795b9",
+        "outcome": "lost",
+        "hpPlayer": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "hpEnemy": [
+          0,
+          0,
+          0,
+          0,
+          47,
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "star-deer",
+          "rank": 2,
+          "best": 0,
+          "stars": 1
+        }
+      ],
+      "seed": 3041712726,
+      "slots": [
+        1
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyRank": 3
+      },
+      "expected": {
+        "hash": "c3fde29e7471fcfc68eda137c040836b235e387effc0a437c0a57cac1986969d",
+        "outcome": "lost",
+        "hpPlayer": [
+          0
+        ],
+        "hpEnemy": [
+          77
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "golden-fox",
+          "rank": 3,
+          "best": 0,
+          "stars": 2
+        },
+        {
+          "uid": "p1",
+          "defId": "lunar-guide",
+          "rank": 4,
+          "best": 0,
+          "stars": 3
+        }
+      ],
+      "seed": 1401181199,
+      "slots": [
+        1,
+        3
+      ],
+      "options": {
+        "enemyCount": 2,
+        "enemyRank": 3
+      },
+      "expected": {
+        "hash": "3d48568e5a8fe870b6d5418762872bb8c23558341d22279142c079535d2555bb",
+        "outcome": "won",
+        "hpPlayer": [
+          55,
+          32
+        ],
+        "hpEnemy": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "verdant-rabbit",
+          "rank": 4,
+          "best": 0,
+          "stars": 3
+        },
+        {
+          "uid": "p1",
+          "defId": "silver-gap",
+          "rank": 5,
+          "best": 0,
+          "stars": 1
+        },
+        {
+          "uid": "p2",
+          "defId": "starlit-arch",
+          "rank": 1,
+          "best": 0,
+          "stars": 2
+        }
+      ],
+      "seed": 4055616968,
+      "slots": [
+        1,
+        3,
+        5
+      ],
+      "options": {
+        "enemyCount": 3,
+        "enemyRank": 3
+      },
+      "expected": {
+        "hash": "6d378815c9ba71d3122e1f989affa97864414622a39f9e0d5f62c44c263cb1c8",
+        "outcome": "won",
+        "hpPlayer": [
+          134,
+          115,
+          8
+        ],
+        "hpEnemy": [
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "mist-deer",
+          "rank": 5,
+          "best": 0,
+          "stars": 1
+        },
+        {
+          "uid": "p1",
+          "defId": "crescent-dancer",
+          "rank": 1,
+          "best": 0,
+          "stars": 2
+        },
+        {
+          "uid": "p2",
+          "defId": "comet-tail",
+          "rank": 2,
+          "best": 0,
+          "stars": 3
+        },
+        {
+          "uid": "p3",
+          "defId": "sun-change",
+          "rank": 3,
+          "best": 0,
+          "stars": 1
+        }
+      ],
+      "seed": 2415085441,
+      "slots": [
+        1,
+        3,
+        5,
+        22
+      ],
+      "options": {
+        "enemyCount": 4,
+        "enemyRank": 3
+      },
+      "expected": {
+        "hash": "90681e2d8b95ec587940e2a69592de7446fbe052cc198e964b26a95c634eb7b8",
+        "outcome": "won",
+        "hpPlayer": [
+          77,
+          76,
+          0,
+          103
+        ],
+        "hpEnemy": [
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "dawn-fox",
+          "rank": 1,
+          "best": 0,
+          "stars": 2
+        },
+        {
+          "uid": "p1",
+          "defId": "frost-return",
+          "rank": 2,
+          "best": 0,
+          "stars": 3
+        },
+        {
+          "uid": "p2",
+          "defId": "amber-pause",
+          "rank": 3,
+          "best": 0,
+          "stars": 1
+        },
+        {
+          "uid": "p3",
+          "defId": "solar-prism",
+          "rank": 4,
+          "best": 0,
+          "stars": 2
+        },
+        {
+          "uid": "p4",
+          "defId": "twig-change",
+          "rank": 5,
+          "best": 0,
+          "stars": 3
+        }
+      ],
+      "seed": 774553914,
+      "slots": [
+        1,
+        3,
+        5,
+        22,
+        24
+      ],
+      "options": {
+        "enemyCount": 5,
+        "enemyRank": 3
+      },
+      "expected": {
+        "hash": "7e169c8155eeeed821e38711a1534580a9f1f8043d7fdb6bf10eaa7b7743d309",
+        "outcome": "won",
+        "hpPlayer": [
+          68,
+          59,
+          11,
+          119,
+          137
+        ],
+        "hpEnemy": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "breeze-sprout",
+          "rank": 2,
+          "best": 0,
+          "stars": 3
+        },
+        {
+          "uid": "p1",
+          "defId": "moon-soloist",
+          "rank": 3,
+          "best": 0,
+          "stars": 1
+        },
+        {
+          "uid": "p2",
+          "defId": "sun-first",
+          "rank": 4,
+          "best": 0,
+          "stars": 2
+        },
+        {
+          "uid": "p3",
+          "defId": "gold-mirror",
+          "rank": 5,
+          "best": 0,
+          "stars": 3
+        },
+        {
+          "uid": "p4",
+          "defId": "clover-step",
+          "rank": 1,
+          "best": 0,
+          "stars": 1
+        },
+        {
+          "uid": "p5",
+          "defId": "moon-deer",
+          "rank": 2,
+          "best": 0,
+          "stars": 2
+        }
+      ],
+      "seed": 3428989683,
+      "slots": [
+        1,
+        3,
+        5,
+        22,
+        24,
+        26
+      ],
+      "options": {
+        "enemyCount": 6,
+        "enemyRank": 3
+      },
+      "expected": {
+        "hash": "9fcadb2f23f234071bd69095c144156ccf058ba19fb1214fdb5dc64cdd582426",
+        "outcome": "won",
+        "hpPlayer": [
+          0,
+          0,
+          0,
+          41,
+          0,
+          0
+        ],
+        "hpEnemy": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "lunar-guide",
+          "rank": 3,
+          "best": 0,
+          "stars": 1
+        }
+      ],
+      "seed": 1788458156,
+      "slots": [
+        1
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyRank": 3
+      },
+      "expected": {
+        "hash": "1acbf8ce7988fd28d6d419884e2b434ca11ef3a63b9d18760dc8924d7cc886d9",
+        "outcome": "lost",
+        "hpPlayer": [
+          0
+        ],
+        "hpEnemy": [
+          60
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "silver-gap",
+          "rank": 4,
+          "best": 0,
+          "stars": 2
+        },
+        {
+          "uid": "p1",
+          "defId": "starlit-arch",
+          "rank": 5,
+          "best": 0,
+          "stars": 3
+        }
+      ],
+      "seed": 147926629,
+      "slots": [
+        1,
+        3
+      ],
+      "options": {
+        "enemyCount": 2,
+        "enemyRank": 3
+      },
+      "expected": {
+        "hash": "96c92fe9947dfd9f63b35f3b22454da147c2338bc614904464dfb1c8c178b8b8",
+        "outcome": "won",
+        "hpPlayer": [
+          129,
+          217
+        ],
+        "hpEnemy": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "crescent-dancer",
+          "rank": 5,
+          "best": 0,
+          "stars": 3
+        },
+        {
+          "uid": "p1",
+          "defId": "comet-tail",
+          "rank": 1,
+          "best": 0,
+          "stars": 1
+        },
+        {
+          "uid": "p2",
+          "defId": "sun-change",
+          "rank": 2,
+          "best": 0,
+          "stars": 2
+        }
+      ],
+      "seed": 2802362398,
+      "slots": [
+        1,
+        3,
+        5
+      ],
+      "options": {
+        "enemyCount": 3,
+        "enemyRank": 3
+      },
+      "expected": {
+        "hash": "e0a81204bbdbe7a0f9bd8a212d7fec55d9970b8dfd90f8be987363585601db06",
+        "outcome": "lost",
+        "hpPlayer": [
+          0,
+          0,
+          0
+        ],
+        "hpEnemy": [
+          140,
+          155,
+          41
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "frost-return",
+          "rank": 1,
+          "best": 0,
+          "stars": 1
+        },
+        {
+          "uid": "p1",
+          "defId": "amber-pause",
+          "rank": 2,
+          "best": 0,
+          "stars": 2
+        },
+        {
+          "uid": "p2",
+          "defId": "solar-prism",
+          "rank": 3,
+          "best": 0,
+          "stars": 3
+        },
+        {
+          "uid": "p3",
+          "defId": "twig-change",
+          "rank": 4,
+          "best": 0,
+          "stars": 1
+        }
+      ],
+      "seed": 1161830871,
+      "slots": [
+        1,
+        3,
+        5,
+        22
+      ],
+      "options": {
+        "enemyCount": 4,
+        "enemyRank": 3
+      },
+      "expected": {
+        "hash": "1126d61dadf2f74541a0b798a61970ca0a5dfdd5b1b3224a645377f4d3d00c40",
+        "outcome": "won",
+        "hpPlayer": [
+          0,
+          0,
+          127,
+          0
+        ],
+        "hpEnemy": [
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "moon-soloist",
+          "rank": 2,
+          "best": 0,
+          "stars": 2
+        },
+        {
+          "uid": "p1",
+          "defId": "sun-first",
+          "rank": 3,
+          "best": 0,
+          "stars": 3
+        },
+        {
+          "uid": "p2",
+          "defId": "gold-mirror",
+          "rank": 4,
+          "best": 0,
+          "stars": 1
+        },
+        {
+          "uid": "p3",
+          "defId": "clover-step",
+          "rank": 5,
+          "best": 0,
+          "stars": 2
+        },
+        {
+          "uid": "p4",
+          "defId": "moon-deer",
+          "rank": 1,
+          "best": 0,
+          "stars": 3
+        }
+      ],
+      "seed": 3816266640,
+      "slots": [
+        1,
+        3,
+        5,
+        22,
+        24
+      ],
+      "options": {
+        "enemyCount": 5,
+        "enemyRank": 3
+      },
+      "expected": {
+        "hash": "2f99b9e50c66bae41ef43353c234ae72a3b6026b61625de575f2023c3c42693e",
+        "outcome": "won",
+        "hpPlayer": [
+          41,
+          0,
+          0,
+          114,
+          102
+        ],
+        "hpEnemy": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "eclipse-deer",
+          "rank": 3,
+          "best": 0,
+          "stars": 3
+        },
+        {
+          "uid": "p1",
+          "defId": "sun-center",
+          "rank": 4,
+          "best": 0,
+          "stars": 1
+        },
+        {
+          "uid": "p2",
+          "defId": "solstice-alone",
+          "rank": 5,
+          "best": 0,
+          "stars": 2
+        },
+        {
+          "uid": "p3",
+          "defId": "seed-center",
+          "rank": 1,
+          "best": 0,
+          "stars": 3
+        },
+        {
+          "uid": "p4",
+          "defId": "sun-fox",
+          "rank": 2,
+          "best": 0,
+          "stars": 1
+        },
+        {
+          "uid": "p5",
+          "defId": "star-deer",
+          "rank": 3,
+          "best": 0,
+          "stars": 2
+        }
+      ],
+      "seed": 2175735113,
+      "slots": [
+        1,
+        3,
+        5,
+        22,
+        24,
+        26
+      ],
+      "options": {
+        "enemyCount": 6,
+        "enemyRank": 3
+      },
+      "expected": {
+        "hash": "f5a4149f538c3f09aeb68694de66dacc62566f717d87f3f93eda5307dad6f75d",
+        "outcome": "won",
+        "hpPlayer": [
+          221,
+          0,
+          21,
+          118,
+          87,
+          115
+        ],
+        "hpEnemy": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "starlit-arch",
+          "rank": 4,
+          "best": 0,
+          "stars": 1
+        }
+      ],
+      "seed": 535203586,
+      "slots": [
+        1
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyRank": 3
+      },
+      "expected": {
+        "hash": "e21d7dd91700af6c7faebb5912f27c88211b208cbd8816e38b7600ef7fbc6793",
+        "outcome": "lost",
+        "hpPlayer": [
+          0
+        ],
+        "hpEnemy": [
+          47
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "comet-tail",
+          "rank": 5,
+          "best": 0,
+          "stars": 2
+        },
+        {
+          "uid": "p1",
+          "defId": "sun-change",
+          "rank": 1,
+          "best": 0,
+          "stars": 3
+        }
+      ],
+      "seed": 3189639355,
+      "slots": [
+        1,
+        3
+      ],
+      "options": {
+        "enemyCount": 2,
+        "enemyRank": 3
+      },
+      "expected": {
+        "hash": "b31be357aec3058b9e9cde9f24a83ad83de1253ce072eb97b4b396ec866a3406",
+        "outcome": "won",
+        "hpPlayer": [
+          106,
+          35
+        ],
+        "hpEnemy": [
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "amber-pause",
+          "rank": 1,
+          "best": 0,
+          "stars": 3
+        },
+        {
+          "uid": "p1",
+          "defId": "solar-prism",
+          "rank": 2,
+          "best": 0,
+          "stars": 1
+        },
+        {
+          "uid": "p2",
+          "defId": "twig-change",
+          "rank": 3,
+          "best": 0,
+          "stars": 2
+        }
+      ],
+      "seed": 1549107828,
+      "slots": [
+        1,
+        3,
+        5
+      ],
+      "options": {
+        "enemyCount": 3,
+        "enemyRank": 3
+      },
+      "expected": {
+        "hash": "b9b9c2ba462aea80543978c3d10ebb80deac52ba913969d53a96aac6890a72f3",
+        "outcome": "lost",
+        "hpPlayer": [
+          0,
+          0,
+          0
+        ],
+        "hpEnemy": [
+          69,
+          1,
+          17
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "sun-first",
+          "rank": 2,
+          "best": 0,
+          "stars": 1
+        },
+        {
+          "uid": "p1",
+          "defId": "gold-mirror",
+          "rank": 3,
+          "best": 0,
+          "stars": 2
+        },
+        {
+          "uid": "p2",
+          "defId": "clover-step",
+          "rank": 4,
+          "best": 0,
+          "stars": 3
+        },
+        {
+          "uid": "p3",
+          "defId": "moon-deer",
+          "rank": 5,
+          "best": 0,
+          "stars": 1
+        }
+      ],
+      "seed": 4203543597,
+      "slots": [
+        1,
+        3,
+        5,
+        22
+      ],
+      "options": {
+        "enemyCount": 4,
+        "enemyRank": 3
+      },
+      "expected": {
+        "hash": "a01c5bd33b66c3356ebfb7819719f01c9ffafbfdf4cef164e2cfb1b9dd5cb1de",
+        "outcome": "won",
+        "hpPlayer": [
+          29,
+          0,
+          18,
+          130
+        ],
+        "hpEnemy": [
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "sun-center",
+          "rank": 3,
+          "best": 0,
+          "stars": 2
+        },
+        {
+          "uid": "p1",
+          "defId": "solstice-alone",
+          "rank": 4,
+          "best": 0,
+          "stars": 3
+        },
+        {
+          "uid": "p2",
+          "defId": "seed-center",
+          "rank": 5,
+          "best": 0,
+          "stars": 1
+        },
+        {
+          "uid": "p3",
+          "defId": "sun-fox",
+          "rank": 1,
+          "best": 0,
+          "stars": 2
+        },
+        {
+          "uid": "p4",
+          "defId": "star-deer",
+          "rank": 2,
+          "best": 0,
+          "stars": 3
+        }
+      ],
+      "seed": 2563012070,
+      "slots": [
+        1,
+        3,
+        5,
+        22,
+        24
+      ],
+      "options": {
+        "enemyCount": 5,
+        "enemyRank": 3
+      },
+      "expected": {
+        "hash": "aed087656287e8411040ecff91f547e4d0e1fa500fe4620a4ac0c850a5045726",
+        "outcome": "lost",
+        "hpPlayer": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "hpEnemy": [
+          100,
+          57,
+          59,
+          50,
+          108
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "sundial-memory",
+          "rank": 4,
+          "best": 0,
+          "stars": 3
+        },
+        {
+          "uid": "p1",
+          "defId": "fern-opener",
+          "rank": 5,
+          "best": 0,
+          "stars": 1
+        },
+        {
+          "uid": "p2",
+          "defId": "canopy-coda",
+          "rank": 1,
+          "best": 0,
+          "stars": 2
+        },
+        {
+          "uid": "p3",
+          "defId": "forest-rabbit",
+          "rank": 2,
+          "best": 0,
+          "stars": 3
+        },
+        {
+          "uid": "p4",
+          "defId": "golden-fox",
+          "rank": 3,
+          "best": 0,
+          "stars": 1
+        },
+        {
+          "uid": "p5",
+          "defId": "lunar-guide",
+          "rank": 4,
+          "best": 0,
+          "stars": 2
+        }
+      ],
+      "seed": 922480543,
+      "slots": [
+        1,
+        3,
+        5,
+        22,
+        24,
+        26
+      ],
+      "options": {
+        "enemyCount": 6,
+        "enemyRank": 3
+      },
+      "expected": {
+        "hash": "5ef23b55d23b725283e63b2505227c744d9b1650dc625868cd067cc0c08f74dc",
+        "outcome": "lost",
+        "hpPlayer": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "hpEnemy": [
+          10,
+          0,
+          88,
+          0,
+          5,
+          57
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "sun-change",
+          "rank": 5,
+          "best": 0,
+          "stars": 1
+        }
+      ],
+      "seed": 3576916312,
+      "slots": [
+        1
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyRank": 3
+      },
+      "expected": {
+        "hash": "251e26cf3bb17f304fb11e5ccbbcaea3cf21defef224a0f27843412aa949ccf3",
+        "outcome": "won",
+        "hpPlayer": [
+          3
+        ],
+        "hpEnemy": [
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "solar-prism",
+          "rank": 1,
+          "best": 0,
+          "stars": 2
+        },
+        {
+          "uid": "p1",
+          "defId": "twig-change",
+          "rank": 2,
+          "best": 0,
+          "stars": 3
+        }
+      ],
+      "seed": 1936384785,
+      "slots": [
+        1,
+        3
+      ],
+      "options": {
+        "enemyCount": 2,
+        "enemyRank": 3
+      },
+      "expected": {
+        "hash": "64351d304428e256aab4d41ba387e687b09a961757a114b7ba114c4cb583460a",
+        "outcome": "lost",
+        "hpPlayer": [
+          0,
+          0
+        ],
+        "hpEnemy": [
+          77,
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "gold-mirror",
+          "rank": 2,
+          "best": 0,
+          "stars": 3
+        },
+        {
+          "uid": "p1",
+          "defId": "clover-step",
+          "rank": 3,
+          "best": 0,
+          "stars": 1
+        },
+        {
+          "uid": "p2",
+          "defId": "moon-deer",
+          "rank": 4,
+          "best": 0,
+          "stars": 2
+        }
+      ],
+      "seed": 295853258,
+      "slots": [
+        1,
+        3,
+        5
+      ],
+      "options": {
+        "enemyCount": 3,
+        "enemyRank": 3
+      },
+      "expected": {
+        "hash": "a1ef7afead57ddc22aaffb62d601f04b6672c5f43f29178756ab6b8eacdedfca",
+        "outcome": "won",
+        "hpPlayer": [
+          0,
+          0,
+          100
+        ],
+        "hpEnemy": [
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "solstice-alone",
+          "rank": 3,
+          "best": 0,
+          "stars": 1
+        },
+        {
+          "uid": "p1",
+          "defId": "seed-center",
+          "rank": 4,
+          "best": 0,
+          "stars": 2
+        },
+        {
+          "uid": "p2",
+          "defId": "sun-fox",
+          "rank": 5,
+          "best": 0,
+          "stars": 3
+        },
+        {
+          "uid": "p3",
+          "defId": "star-deer",
+          "rank": 1,
+          "best": 0,
+          "stars": 1
+        }
+      ],
+      "seed": 2950289027,
+      "slots": [
+        1,
+        3,
+        5,
+        22
+      ],
+      "options": {
+        "enemyCount": 4,
+        "enemyRank": 3
+      },
+      "expected": {
+        "hash": "62b5540a6618af3df8e8eea5498731b464aa214eb7bb90801f48daf80fa48922",
+        "outcome": "lost",
+        "hpPlayer": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "hpEnemy": [
+          0,
+          0,
+          9,
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "fern-opener",
+          "rank": 4,
+          "best": 0,
+          "stars": 2
+        },
+        {
+          "uid": "p1",
+          "defId": "canopy-coda",
+          "rank": 5,
+          "best": 0,
+          "stars": 3
+        },
+        {
+          "uid": "p2",
+          "defId": "forest-rabbit",
+          "rank": 1,
+          "best": 0,
+          "stars": 1
+        },
+        {
+          "uid": "p3",
+          "defId": "golden-fox",
+          "rank": 2,
+          "best": 0,
+          "stars": 2
+        },
+        {
+          "uid": "p4",
+          "defId": "lunar-guide",
+          "rank": 3,
+          "best": 0,
+          "stars": 3
+        }
+      ],
+      "seed": 1309757500,
+      "slots": [
+        1,
+        3,
+        5,
+        22,
+        24
+      ],
+      "options": {
+        "enemyCount": 5,
+        "enemyRank": 3
+      },
+      "expected": {
+        "hash": "f8e6582c544c977b9e190858b0323497dbad962aec1c0875b0c0ad6805f11ba1",
+        "outcome": "won",
+        "hpPlayer": [
+          21,
+          126,
+          28,
+          98,
+          0
+        ],
+        "hpEnemy": [
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "moss-tide",
+          "rank": 5,
+          "best": 0,
+          "stars": 3
+        },
+        {
+          "uid": "p1",
+          "defId": "emerald-mirror",
+          "rank": 1,
+          "best": 0,
+          "stars": 1
+        },
+        {
+          "uid": "p2",
+          "defId": "moon-fawn",
+          "rank": 2,
+          "best": 0,
+          "stars": 2
+        },
+        {
+          "uid": "p3",
+          "defId": "verdant-rabbit",
+          "rank": 3,
+          "best": 0,
+          "stars": 3
+        },
+        {
+          "uid": "p4",
+          "defId": "silver-gap",
+          "rank": 4,
+          "best": 0,
+          "stars": 1
+        },
+        {
+          "uid": "p5",
+          "defId": "starlit-arch",
+          "rank": 5,
+          "best": 0,
+          "stars": 2
+        }
+      ],
+      "seed": 3964193269,
+      "slots": [
+        1,
+        3,
+        5,
+        22,
+        24,
+        26
+      ],
+      "options": {
+        "enemyCount": 6,
+        "enemyRank": 3
+      },
+      "expected": {
+        "hash": "f4340070b91ad5fd598800efc3d068fc6dadfba69db416b4e98ba8b6a7193f06",
+        "outcome": "won",
+        "hpPlayer": [
+          151,
+          56,
+          0,
+          51,
+          0,
+          234
+        ],
+        "hpEnemy": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "team": [
+        {
+          "uid": "p0",
+          "defId": "twig-change",
+          "rank": 1,
+          "best": 0,
+          "stars": 1
+        }
+      ],
+      "seed": 2323661742,
+      "slots": [
+        1
+      ],
+      "options": {
+        "enemyCount": 1,
+        "enemyRank": 3
+      },
+      "expected": {
+        "hash": "d8386d77deff873a10facb176d9dad4a17450580efe3365f11a50d4777f04222",
+        "outcome": "lost",
+        "hpPlayer": [
+          0
+        ],
+        "hpEnemy": [
+          24
+        ]
+      }
+    }
+  ]
+}

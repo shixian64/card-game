@@ -6,7 +6,10 @@ import {createHash,timingSafeEqual} from 'node:crypto';
 import {createRemoteJWKSet,jwtVerify} from 'jose';
 import {createGameService} from './game.mjs';
 import {createSocialService} from './social.mjs';
+import {createDuelService} from './duel.mjs';
+import {clientAddress,trustedProxiesFromEnv} from './client-address.mjs';
 import {openStore,randomToken,hash,validateEvent,summary} from './store.mjs';
+import {LINUXDO_ISSUER,parseLinuxdoConfig,createLinuxdoProvider,verifyLinuxDoIdentity,displayName} from './linuxdo.mjs';
 
 const ISSUER='https://auth.openai.com';
 const loopback=v=>['127.0.0.1','::1','::ffff:127.0.0.1'].includes(v);
@@ -32,6 +35,11 @@ export function configFromEnv(env=process.env) {
     host:devLogin?'127.0.0.1':(env.HOST||'127.0.0.1'),port:Number(env.PORT||3000),
     clientId:env.OPENAI_CLIENT_ID||'',secret:env.OPENAI_CLIENT_SECRET||'',method,
     admins:new Set((env.ADMIN_OPENAI_SUBJECTS||'').split(',').map(s=>s.trim()).filter(Boolean)),
+    linuxdo:parseLinuxdoConfig(env),
+    trustedProxies:trustedProxiesFromEnv(env.TRUSTED_PROXIES||''),
+    // 旧单人局新建开关：正式切换后默认停开（存量局按冻结规则结束）；显式 =1 才允许新开旧 PvE。
+    legacyMatchStarts:env.LEGACY_MATCH_STARTS!=='0',
+    duelSchedulerTickMs:Number(env.DUEL_SCHEDULER_TICK_MS||1000),
     database:env.DATABASE_PATH||resolve('data/asteria.sqlite'),dist:resolve('dist'),
   };
 }
@@ -40,14 +48,30 @@ function send(res,status,value) {res.writeHead(status,{'Content-Type':'applicati
 function redirect(res,url) {res.writeHead(302,{Location:url,'Cache-Control':'no-store'});res.end();}
 function cookie(res,name,value,secure,maxAge=28800) {const entry=name+'='+value+'; Path=/; HttpOnly; SameSite=Lax; Max-Age='+maxAge+(secure?'; Secure':'');res.setHeader('Set-Cookie',[...(res.getHeader('Set-Cookie')||[]),entry]);}
 async function json(req) {let size=0;const chunks=[];for await(const c of req){size+=c.length;if(size>16384){const e=new Error('请求过大');e.status=413;throw e;}chunks.push(c);}try{return JSON.parse(Buffer.concat(chunks).toString());}catch{const e=new Error('JSON 格式不正确');e.status=400;throw e;}}
+// 只把合法 4xx 视为业务错误；未知异常必须是 5xx，客户端才能保留对局重试。
+function apiErrorResponse(error,scope,path) {
+  const status=Number.isInteger(error?.status)&&error.status>=400&&error.status<=599?error.status:500;
+  const business=status<500;
+  if(!business)console.error(scope+' api unexpected error',reqTag(path),error);
+  return {status,payload:{error:business?(error.message||'操作失败'):'操作未完成，请稍后重试',...(business&&typeof error.code==='string'?{code:error.code}:{})}};
+}
+function reqTag(path){return typeof path==='string'?path.slice(0,120):path;}
 export function createApp(config=configFromEnv(),options={}) {
   const store=options.store??openStore(config.database);store.clean();
-  const game=createGameService(store.db,{now:options.now}),social=createSocialService(store.db);
+  const game=createGameService(store.db,{now:options.now,legacyMatchStart:config.legacyMatchStarts??true});
+  const social=createSocialService(store.db);
+  const duel=createDuelService(store.db,{now:options.now});
+  // 服务端定时器推进双人房间（约 1s 扫描到期房间）；不依赖任何浏览器轮询。
+  const duelTimer=setInterval(()=>{try{duel.tick();}catch{}},config.duelSchedulerTickMs??1000);
+  duelTimer.unref?.();
   const sessionName=config.secure?'__Host-asteria-session':'asteria-session';
   const transactionName=config.secure?'__Host-asteria-transaction':'asteria-transaction';
+  const linuxdoTransactionName=config.secure?'__Host-asteria-linuxdo-transaction':'asteria-linuxdo-transaction';
   const visitorName=config.secure?'__Host-asteria-visitor':'asteria-visitor';
+  const linuxdo=config.linuxdo.enabled?createLinuxdoProvider({config:config.linuxdo,fetchImpl:options.fetch}):null;
   let discoveryPromise;const rates=new Map();let lastClean=Date.now();
-  const isAdmin=user=>!!user&&(user.issuer===ISSUER&&user.client_id===config.clientId&&config.admins.has(user.subject)||config.devLogin&&user.issuer==='local-development'&&user.subject==='local-admin');
+  const providerOf=user=>!user?'unknown':user.issuer===LINUXDO_ISSUER?'linuxdo':user.issuer===ISSUER?'openai':user.issuer==='local-development'?'development':'unknown';
+  const isAdmin=user=>!!user&&(user.issuer===ISSUER&&user.client_id===config.clientId&&config.admins.has(user.subject)||user.issuer===LINUXDO_ISSUER&&user.client_id===config.linuxdo.clientId&&config.linuxdo.admins.has(user.subject)||config.devLogin&&user.issuer==='local-development'&&user.subject==='local-admin');
   async function discovery() {
     discoveryPromise??=(async()=>{
       const response=await fetch(ISSUER+'/.well-known/openid-configuration',{signal:AbortSignal.timeout(10000)});
@@ -72,12 +96,13 @@ export function createApp(config=configFromEnv(),options={}) {
     try {
     const url=new URL(req.url||'/',config.origin);path=url.pathname;
     const jar=cookies(req),user=store.user(jar[sessionName]);
+    const address=clientAddress(req,config.trustedProxies);
     let visitor=jar[visitorName];
     if(!/^[a-f0-9]{64}$/.test(visitor??'')){visitor=hash(randomToken());cookie(res,visitorName,visitor,config.secure,90*86400);}
     if(Date.now()-lastClean>3600000){store.clean();lastClean=Date.now();}
       if(['POST','PUT','PATCH','DELETE'].includes(req.method)&&req.headers.origin!==config.origin)return send(res,403,{error:'来源校验失败'});
       if(req.method==='GET'&&path==='/api/health')return send(res,200,{ok:true});
-      if(req.method==='GET'&&path==='/api/auth/me')return send(res,200,{user:user?{id:user.id,name:user.name,subject:user.subject,admin:isAdmin(user),development:user.issuer==='local-development'}:null,loginEnabled:!!config.clientId,devLogin:config.devLogin,analytics:true});
+      if(req.method==='GET'&&path==='/api/auth/me')return send(res,200,{user:user?{id:user.id,name:user.name,subject:user.subject,admin:isAdmin(user),development:user.issuer==='local-development',provider:providerOf(user)}:null,loginEnabled:!!config.clientId,linuxdoLoginEnabled:config.linuxdo.enabled,devLogin:config.devLogin,analytics:true});
       if(req.method==='POST'&&path==='/api/auth/logout'){store.logout(jar[sessionName]);cookie(res,sessionName,'',config.secure,0);return send(res,200,{ok:true});}
       if(req.method==='POST'&&path==='/api/auth/dev-login') {
         if(!config.devLogin||!loopback(req.socket.remoteAddress))return send(res,404,{error:'未启用'});
@@ -89,7 +114,7 @@ export function createApp(config=configFromEnv(),options={}) {
       }
       if(req.method==='GET'&&path==='/auth/openai') {
         if(!config.clientId)return redirect(res,'/?auth_error=not_configured');
-        if(limited('auth:'+req.socket.remoteAddress,15))return send(res,429,{error:'登录尝试过多，请稍后重试'});
+        if(limited('auth:'+address,15))return send(res,429,{error:'登录尝试过多，请稍后重试'});
         const d=await discovery(),token=randomToken(),transaction={state:randomToken(),verifier:randomToken(),nonce:randomToken()};
         if(jar[transactionName])store.consumeTransaction(jar[transactionName]);
         store.transaction(token,transaction);cookie(res,transactionName,token,config.secure,600);
@@ -117,8 +142,46 @@ export function createApp(config=configFromEnv(),options={}) {
           cookie(res,sessionName,session.token,config.secure);return redirect(res,'/?login=success');
         } catch {return redirect(res,'/?auth_error=failed');}
       }
+      if(req.method==='GET'&&path==='/auth/linuxdo') {
+        if(!linuxdo)return redirect(res,'/?auth_error=not_configured&provider=linuxdo');
+        if(limited('auth:'+address,15))return send(res,429,{error:'登录尝试过多，请稍后重试'});
+        await linuxdo.discovery();
+        const token=randomToken(),redirectUri=config.origin+'/auth/linuxdo/callback';
+        const transaction={state:randomToken(),verifier:randomToken(),nonce:randomToken(),clientId:config.linuxdo.clientId,redirectUri};
+        if(jar[linuxdoTransactionName])store.consumeLinuxdoTransaction(jar[linuxdoTransactionName]);
+        store.linuxdoTransaction(token,transaction);cookie(res,linuxdoTransactionName,token,config.secure,600);
+        return redirect(res,await linuxdo.authorizeUrl(transaction));
+      }
+      if(req.method==='GET'&&path==='/auth/linuxdo/callback') {
+        const token=jar[linuxdoTransactionName],transaction=token?store.consumeLinuxdoTransaction(token):null;
+        cookie(res,linuxdoTransactionName,'',config.secure,0);
+        try {
+          if(!linuxdo||!transaction||transaction.expires_at<Date.now()||transaction.client_id!==config.linuxdo.clientId
+            ||transaction.redirect_uri!==config.origin+'/auth/linuxdo/callback'
+            ||!equal(transaction.state,url.searchParams.get('state'))||url.searchParams.has('error')||!url.searchParams.get('code'))throw new Error('无效登录回调');
+          // 上游网络请求全部在数据库事务外完成；失败保留原会话与资产。
+          const tokens=await linuxdo.exchange({code:url.searchParams.get('code'),verifier:transaction.verifier,redirectUri:transaction.redirect_uri});
+          const payload=await verifyLinuxDoIdentity(tokens.id_token,linuxdo.jwksKey,config.linuxdo.clientId,transaction.nonce);
+          let profile=null;
+          try {
+            if(typeof tokens.access_token==='string'&&tokens.access_token) {
+              const fetched=await linuxdo.userinfo(tokens.access_token);
+              if(fetched&&equal(fetched.sub,payload.sub))profile=fetched;
+            }
+          }catch{/* 展示资料获取失败不影响已验证身份的登录 */}
+          if(profile?.active===false)throw new Error('该 LINUX DO 账号当前不可用');
+          const name=displayName(payload,profile);
+          const session=store.shortTransaction(()=>{
+            const created=store.login({issuer:LINUXDO_ISSUER,clientId:config.linuxdo.clientId,subject:payload.sub,name});
+            game.ensureProfile(created.user);
+            store.logout(jar[sessionName]);
+            return created;
+          });
+          cookie(res,sessionName,session.token,config.secure);return redirect(res,'/?login=success&provider=linuxdo');
+        }catch{return redirect(res,'/?auth_error=failed&provider=linuxdo');}
+      }
       if(req.method==='POST'&&path==='/api/events') {
-        if(limited('event:'+req.socket.remoteAddress,600)||limited('visitor:'+visitor,120))return send(res,429,{error:'事件发送过于频繁'});
+        if(limited('event:'+address,600)||limited('visitor:'+visitor,120))return send(res,429,{error:'事件发送过于频繁'});
         let event;try{event=validateEvent(await json(req));}catch(e){return send(res,e.status||400,{error:e.message});}
         const added=store.event(visitor,user,event);return send(res,200,{ok:true,duplicate:!added});
       }
@@ -133,7 +196,10 @@ export function createApp(config=configFromEnv(),options={}) {
         if(req.headers['x-asteria-user']&&req.headers['x-asteria-user']!==user.id)return send(res,409,{error:'账号已切换，请刷新游戏'});
         game.ensureProfile(user);
         if(req.method==='GET'&&path==='/api/game')return send(res,200,game.snapshot(user));
-        if(req.method==='GET'&&path==='/api/market')return send(res,200,game.marketSnapshot(user,Object.fromEntries(url.searchParams)));
+        if(req.method==='GET'&&path==='/api/market'){
+          if(limited('market-read:'+user.id,60)||limited('market-ip:'+address,300))return send(res,429,{error:'市场查询过于频繁，请稍后重试'});
+          return send(res,200,game.marketSnapshot(user,Object.fromEntries(url.searchParams)));
+        }
         if(req.method==='GET'&&path==='/api/social')return send(res,200,social.snapshot(user));
         if(req.method==='GET'&&path==='/api/chat')return send(res,200,{messages:social.messages(user,url.searchParams.get('channel')||'world')});
         if(req.method==='GET'&&path==='/api/admin/economy'){
@@ -150,8 +216,41 @@ export function createApp(config=configFromEnv(),options={}) {
             if(path.startsWith('/api/game/'))return send(res,200,game.game(user,path.slice('/api/game/'.length),input));
             if(path.startsWith('/api/market/'))return send(res,200,game.market(user,path.slice('/api/market/'.length),input));
             if(path.startsWith('/api/social/'))return send(res,200,social.execute(user,path.slice('/api/social/'.length),input));
-          }catch(e){return send(res,e.status||400,{error:e.message||'操作失败'});}
+          }catch(e){const result=apiErrorResponse(e,'game',path);return send(res,result.status,result.payload);}
         }
+      }
+      if(path.startsWith('/api/duel')&&(path==='/api/duel'||path.startsWith('/api/duel/'))) {
+        if(!user)return send(res,401,{error:'请先登录账号'});
+        if(req.headers['x-asteria-user']&&req.headers['x-asteria-user']!==user.id)return send(res,409,{error:'账号已切换，请刷新游戏'});
+        game.ensureProfile(user);
+        try{duel.tick();}catch{/* GET 触发的安全 catch-up 失败不阻塞请求，调度器会重试 */}
+        const duelPath=path.slice('/api/duel'.length);
+        try {
+          if(req.method==='GET'&&duelPath==='/me')return send(res,200,duel.me(user));
+          if(req.method==='POST'&&duelPath==='/create'){
+            if(limited('duel-create:'+user.id,10))return send(res,429,{error:'创建太频繁，请稍后重试'});
+            const input=await json(req);return send(res,200,duel.create(user,input));
+          }
+          if(req.method==='POST'&&duelPath==='/join'){
+            if(limited('duel-join:'+user.id,20))return send(res,429,{error:'加入尝试过多，请稍后重试'});
+            const input=await json(req);return send(res,200,duel.join(user,input.code||input.inviteCode));
+          }
+          const roomMatch=duelPath.match(/^\/([A-Za-z0-9-]+)(?:\/([a-z]+))?(?:\/([A-Za-z0-9-]+))?\/?$/);
+          if(roomMatch){
+            const [,roomId,action,extra]=roomMatch;
+            if(req.method==='GET'&&!action)return send(res,200,duel.view(user,roomId));
+            if(req.method==='GET'&&action==='battles'&&extra)return send(res,200,duel.battle(user,roomId,extra));
+            if(req.method==='POST'&&['loadout','ready','command','leave'].includes(action)){
+              if(limited('duel-command:'+user.id,120))return send(res,429,{error:'操作太快，请稍后重试'});
+              const input=await json(req);
+              if(action==='loadout')return send(res,200,duel.loadout(user,roomId,input));
+              if(action==='ready')return send(res,200,duel.setReady(user,roomId,input?.ready!==false));
+              if(action==='command')return send(res,200,duel.command(user,roomId,input));
+              if(action==='leave')return send(res,200,duel.leave(user,roomId,input?.action||'leave'));
+            }
+          }
+          return send(res,404,{error:'接口不存在'});
+        }catch(e){const result=apiErrorResponse(e,'duel',path);return send(res,result.status,result.payload);}
       }
       if(path.startsWith('/api/')||path.startsWith('/auth/'))return send(res,404,{error:'接口不存在'});
       if(!['GET','HEAD'].includes(req.method))return send(res,405,{error:'不支持的请求方法'});
@@ -163,7 +262,7 @@ export function createApp(config=configFromEnv(),options={}) {
     } catch(e) {if(!res.headersSent)send(res,Number.isInteger(e.status)&&e.status>=400&&e.status<500?e.status:500,{error:e.status?e.message:'服务暂不可用，请稍后重试'});else res.end();console.error('Request failed:',path,e.code||e.name);}
   });
   server.requestTimeout=15000;server.headersTimeout=10000;
-  return {server,store,game,social,isAdmin,close:()=>new Promise(resolve=>server.close(()=>{store.db.close();resolve();}))};
+  return {server,store,game,social,duel,isAdmin,close:()=>new Promise(resolve=>server.close(()=>{clearInterval(duelTimer);store.db.close();resolve();}))};
 }
 if(process.argv[1]&&fileURLToPath(import.meta.url)===resolve(process.argv[1])){
   const config=configFromEnv(),app=createApp(config);

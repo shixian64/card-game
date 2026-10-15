@@ -1,0 +1,86 @@
+/* 双人短局主对局 UI（DUEL-RULES-1）。沿用 combat-app 的暗色基调与按钮体系；
+   布局保持功能优先：HUD / 棋盘 / 商店 / 背包 / 回放。 */
+.duel-lobby,.duel-lobby-room,.duel-arena,.duel-finished{min-height:100%;display:flex;flex-direction:column;gap:14px;}
+.duel-lobby-copy{max-width:640px;margin:auto;text-align:center;display:flex;flex-direction:column;gap:14px;padding:32px 16px;}
+.duel-lobby-copy h1{font-size:30px;}
+.duel-lobby-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+.duel-join{display:flex;gap:8px;}
+.duel-join input{width:150px;padding:9px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.16);background:rgba(10,14,24,.6);color:inherit;letter-spacing:2px;text-transform:uppercase;}
+.duel-error{color:#e8a2a2;}
+.duel-notice{display:flex;align-items:center;gap:6px;color:#d9c589;}
+.duel-room-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;}
+.duel-invite{font-size:14px;background:rgba(255,255,255,.07);border-radius:8px;padding:4px 10px;margin-left:10px;}
+.duel-invite b{letter-spacing:3px;}
+.duel-room-status{display:flex;gap:14px;font-size:14px;color:var(--ink-soft,#b9c2d4);}
+.duel-waiting{color:#d9c589;}
+.duel-loadout{display:flex;flex-direction:column;gap:12px;}
+.duel-loadout-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;}
+.duel-loadout-card{display:flex;flex-direction:column;gap:6px;border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:8px;background:rgba(12,16,28,.5);}
+.duel-loadout-card.picked{border-color:#d9c589;box-shadow:0 0 0 1px rgba(217,197,137,.35);}
+.duel-loadout-pick{display:flex;flex-direction:column;align-items:center;gap:4px;background:none;border:none;color:inherit;cursor:pointer;}
+.duel-loadout-pick img{width:64px;height:64px;object-fit:cover;border-radius:10px;}
+.duel-quality select{width:100%;margin-top:2px;}
+.duel-starter{font-size:12px;padding:5px;border-radius:8px;border:1px dashed rgba(255,255,255,.25);background:none;color:inherit;cursor:pointer;}
+.duel-starter.on{border-style:solid;border-color:#7fae86;color:#a8d3ae;}
+.duel-loadout-summary{color:var(--ink-soft,#b9c2d4);}
+.duel-ready-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+.duel-hud{display:flex;justify-content:space-between;align-items:center;gap:10px;border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:10px 14px;background:rgba(12,16,28,.55);}
+.duel-hud-side{display:flex;align-items:center;gap:10px;font-size:14px;}
+.duel-hud-side.foe{justify-content:flex-end;}
+.duel-hp,.duel-gold{display:inline-flex;align-items:center;gap:4px;}
+.duel-hud-mid{display:flex;flex-direction:column;align-items:center;gap:2px;}
+.duel-round{font-size:15px;font-weight:600;}
+.duel-timer{font-size:22px;font-variant-numeric:tabular-nums;color:#d9c589;}
+.duel-pop{font-size:12px;color:var(--ink-soft,#b9c2d4);}
+.duel-main{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(280px,1fr);gap:14px;align-items:start;}
+.duel-board-wrap{display:flex;flex-direction:column;gap:10px;}
+.duel-board{position:relative;width:100%;aspect-ratio:7.5/8;background:radial-gradient(120% 90% at 50% 100%,rgba(38,52,44,.55),rgba(10,14,24,.75)),rgba(10,14,24,.6);border:1px solid rgba(255,255,255,.08);border-radius:16px;}
+.duel-cell{position:absolute;width:11%;aspect-ratio:1/1.12;transform:translate(-50%,-50%);border-radius:18%;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);padding:0;cursor:default;}
+.duel-cell.mine:not(.occupied){cursor:pointer;border-color:rgba(217,197,137,.25);}
+.duel-cell.mine:not(.occupied):hover{background:rgba(217,197,137,.12);}
+.duel-cell.occupied{border-color:#d9c589;background:rgba(217,197,137,.14);cursor:pointer;}
+.duel-cell.combat{border-color:rgba(160,190,230,.4);}
+.duel-chip,.duel-combat-chip{position:absolute;inset:8%;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:min(1vw,11px);line-height:1.15;border-radius:8px;text-align:center;overflow:hidden;}
+.duel-chip{background:rgba(217,197,137,.22);border:1px solid rgba(217,197,137,.5);}
+.duel-combat-chip{background:rgba(120,60,60,.4);border:1px solid rgba(230,140,140,.6);}
+.duel-combat-chip.mine{background:rgba(70,110,90,.45);border-color:rgba(150,210,170,.7);}
+.duel-board-tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+.duel-surrender{margin-left:auto;color:#e0a9a9;}
+.duel-scout{border:1px dashed rgba(255,255,255,.16);border-radius:12px;padding:8px 10px;font-size:13px;display:flex;flex-direction:column;gap:6px;}
+.duel-scout-unit{display:inline-block;margin:2px 6px 2px 0;padding:2px 8px;border-radius:8px;background:rgba(255,255,255,.06);}
+.duel-side{display:flex;flex-direction:column;gap:12px;min-width:0;}
+.duel-item-choice{border:1px solid #d9c589;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px;}
+.duel-item-candidates{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;}
+.duel-item-candidates button{display:flex;flex-direction:column;gap:4px;align-items:flex-start;padding:8px;border-radius:10px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:inherit;cursor:pointer;}
+.duel-item-candidates small{color:var(--ink-soft,#b9c2d4);text-align:left;}
+.duel-shop,.duel-roster,.duel-items,.duel-replay-panel,.duel-income{border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px;background:rgba(12,16,28,.45);}
+.duel-shop-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.duel-shop-head b{margin-right:auto;}
+.duel-offer{display:flex;align-items:center;gap:10px;padding:6px;border-radius:10px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04);color:inherit;cursor:pointer;text-align:left;}
+.duel-offer img{width:38px;height:38px;border-radius:8px;object-fit:cover;}
+.duel-offer span{display:flex;flex-direction:column;min-width:0;flex:1;}
+.duel-offer small{color:var(--ink-soft,#b9c2d4);font-size:12px;}
+.duel-offer em{font-style:normal;color:#d9c589;}
+.duel-unit{display:flex;align-items:center;gap:8px;}
+.duel-unit>button:first-child{flex:1;display:flex;flex-direction:column;align-items:flex-start;background:none;border:none;color:inherit;cursor:pointer;padding:4px;border-radius:8px;}
+.duel-unit.selected>button:first-child{background:rgba(217,197,137,.16);}
+.duel-unit.deployed>button:first-child small::after{content:' · 已上阵';color:#a8d3ae;}
+.duel-unit-basis{font-size:12px;color:var(--ink-soft,#b9c2d4);}
+.duel-unit-sell{padding:3px 8px;border-radius:8px;border:1px solid rgba(224,169,169,.4);background:none;color:#e0a9a9;cursor:pointer;}
+.duel-item{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.duel-item>button:first-child{flex:1;min-width:120px;display:flex;flex-direction:column;align-items:flex-start;background:none;border:none;color:inherit;cursor:pointer;padding:4px;border-radius:8px;text-align:left;}
+.duel-item.selected>button:first-child{background:rgba(217,197,137,.16);}
+.duel-replay-log{max-height:130px;overflow:auto;display:flex;flex-direction:column;gap:2px;font-size:12px;color:var(--ink-soft,#b9c2d4);}
+.duel-replay-controls{display:flex;gap:8px;}
+.duel-win{color:#a8d3ae;font-weight:700;}
+.duel-loss{color:#e0a9a9;font-weight:700;}
+.duel-finished{align-items:center;text-align:center;gap:12px;padding:48px 16px;}
+.duel-final-hp{display:flex;align-items:center;gap:10px;}
+.duel-final-reward{font-size:15px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:center;}
+.duel-final-reward b{font-size:22px;}
+.duel-zero{color:var(--ink-soft,#b9c2d4);font-weight:700;}
+@media (max-width:900px){
+  .duel-main{grid-template-columns:1fr;}
+  .duel-lobby-copy h1{font-size:24px;}
+}
+.duel-finished-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}

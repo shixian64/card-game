@@ -1,0 +1,152 @@
+{
+  "status": "design_arithmetic_and_existing_geometry_only_not_gameplay_validation",
+  "draftId": "DUEL-DRAFT-1",
+  "date": "2026-10-14",
+  "timing": {
+    "planningSec": 285,
+    "combatSec": 240,
+    "settlementSec": 30,
+    "totalSec": 555,
+    "formatted": "09:15"
+  },
+  "roundKinds": {
+    "pvp": 7,
+    "neutral": 3
+  },
+  "population": [
+    3,
+    3,
+    4,
+    4,
+    5,
+    5,
+    6,
+    6,
+    6,
+    6
+  ],
+  "economy": {
+    "guaranteedSupplyByRound": [
+      {
+        "round": 1,
+        "increment": 40,
+        "cumulative": 40
+      },
+      {
+        "round": 2,
+        "increment": 32,
+        "cumulative": 72
+      },
+      {
+        "round": 3,
+        "increment": 22,
+        "cumulative": 94
+      },
+      {
+        "round": 4,
+        "increment": 22,
+        "cumulative": 116
+      },
+      {
+        "round": 5,
+        "increment": 38,
+        "cumulative": 154
+      },
+      {
+        "round": 6,
+        "increment": 22,
+        "cumulative": 176
+      },
+      {
+        "round": 7,
+        "increment": 22,
+        "cumulative": 198
+      },
+      {
+        "round": 8,
+        "increment": 44,
+        "cumulative": 242
+      },
+      {
+        "round": 9,
+        "increment": 22,
+        "cumulative": 264
+      },
+      {
+        "round": 10,
+        "increment": 22,
+        "cumulative": 286
+      }
+    ],
+    "guaranteedTotal": 286,
+    "neutralWinBonusUpper": 9,
+    "interestUpper": 17,
+    "separateUpperBoundTotal": 312,
+    "refundIsNotNewIssuance": true
+  },
+  "life": {
+    "startingHp": 32,
+    "lossByRound": [
+      0,
+      4,
+      4,
+      0,
+      6,
+      6,
+      0,
+      8,
+      8,
+      8
+    ],
+    "earliestNormalEliminationRound": 9
+  },
+  "pricing": {
+    "q5HpAttackProxy": 1.2992000000000001,
+    "normalizedProxyPerPrice": {
+      "oneToFive": 0.25984,
+      "tenToSeventeen": 0.7642352941176471,
+      "tenToFourteen": 0.9280000000000002
+    },
+    "proxyIsNotActualCombatPower": true
+  },
+  "offerMath": {
+    "oneDefinitionPerSlot": 0.125,
+    "atLeastOneTargetInFiveSlots": 0.487091064453125,
+    "excludesBuyingPolicyAndStarCompletion": true
+  },
+  "equipment": {
+    "definitions": 6,
+    "perUnitSlots": 2,
+    "guaranteedItemsPerPlayer": 3
+  },
+  "notRun": [
+    "new_duel_implementation",
+    "combat_balance_simulation",
+    "shop_policy_full_match_simulation",
+    "actual_dual_client_flow",
+    "build_or_typecheck"
+  ],
+  "existingHexGeometry": {
+    "cells": 56,
+    "rotationInvolutionCases": 56,
+    "neighborSetCases": 56,
+    "distancePairCases": 3136,
+    "projectionCenterCases": 56,
+    "localDeploymentCases": 28,
+    "passed": true,
+    "legacyEnemySlotMappingIsNot180Rotation": true,
+    "requiresNewDuelAdapter": true
+  },
+  "documentationChecks": {
+    "acceptanceCases": 69,
+    "uniqueAcceptanceIds": true,
+    "markdownFencesAndLocalLinks": true,
+    "configMatchesDocumentRoundAndItemIds": true
+  },
+  "productScope": {
+    "rebuildMainMatch": true,
+    "parallelModeSelector": false,
+    "newSinglePlayerPractice": false,
+    "legacyPveCompatibilityOnly": true
+  }
+}

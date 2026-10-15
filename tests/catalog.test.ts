@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { AFFINITIES, CARDS, CARD_MAP, CARD_ART_NOTE, COMBOS, TALENTS, CONDITIONS } from '../src/data.ts';
+import { AFFINITIES, CARDS, CARD_MAP, CARD_ART_NOTE, COMBOS, TALENTS, CONDITIONS, LEGACY_RARITY } from '../src/data.ts';
 import { craft, summon, setLineup, startRun, resolveTurn, preview, parseSave } from '../src/engine.ts';
 import type { GameState, Run } from '../src/engine.ts';
 import { DATE, fresh, funded, finish, fixture, keys, roundTrip } from './helpers.ts';
@@ -12,7 +12,8 @@ test('扩容为 36 种，每系与每稀有度数量均衡，旧编号与顺序�
   assert.equal(CARDS.length,36);assert.deepEqual(CARDS.slice(0,LEGACY_IDS.length).map(c=>c.id),LEGACY_IDS);assert.equal(new Set(CARDS.map(c=>c.name)).size,CARDS.length);
   for(const affinity of Object.keys(AFFINITIES)){
     const group=CARDS.filter(c=>c.affinity===affinity);assert.equal(group.length,CARDS.length/3);
-    for(const rarity of ['R','SR','SSR'])assert.equal(group.filter(c=>c.rarity===rarity).length,group.length/3);
+    for(const rarity of ['R','SR','SSR'])assert.equal(group.filter(c=>LEGACY_RARITY[c.id]===rarity).length,group.length/3);
+  assert.ok(CARDS.every(c=>!Object.hasOwn(c,'rarity')),'新规则 CardDef 不再有 rarity 字段');
   }
   assert.equal(new Set(CARDS.map(c=>[c.affinity,c.cost,c.base,c.trait].join('/'))).size,CARDS.length);
   assert.ok(CARDS.every(c=>c.base<=10&&c.cost<=3));
@@ -34,7 +35,7 @@ test('四份扩容前真实 v1 存档仍可原样导入，旧局计分不变',()
 });
 test('所有星灵均能从同一个三连卡池抽取，包括新增 24 种',()=>{
   const seen=new Set<string>();
-  for(let i=1;i<=4000&&seen.size<CARDS.length;i++){const s=summon(fresh(Math.imul(i,0x9e3779b9)>>>0));for(const id of s.lastSummon)seen.add(id);}
+  for(let i=1;i<=4000&&seen.size<CARDS.length;i++){const s=summon(fresh(Math.imul(i,0x9e3779b9)>>>0));for(const draw of s.lastSummon)seen.add(draw.defId);}
   assert.deepEqual([...seen].sort(),CARDS.map(c=>c.id).sort());
 });
 for(const card of variants)test('新增星灵可制作、上阵、实际出牌并完成培育：'+card.name,()=>{

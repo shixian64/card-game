@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createContext,runInContext} from 'node:vm';
 import ts from 'typescript';
-import {CARDS,CARD_MAP} from '../src/data.ts';
+import {CARDS,CARD_MAP,QUALITY,LEGACY_ECONOMY,LEGACY_RARITY,legacyUnitPrice,unitShopPrice,qualityName} from '../src/data.ts';
 
 // Execute real source helpers/effects with controlled clocks, not copied game logic.
 // No browser, network, React renderer, or additional dependency is needed.
@@ -34,7 +34,7 @@ function compile(code:string,scope:Record<string,unknown>={}){
   return context;
 }
 function plain<T>(value:T):T{return JSON.parse(JSON.stringify(value));}
-const moduleContext=compile(sourceText,{exports:{},require:(name:string)=>name==='./data'?{CARD_MAP}: {}});
+const moduleContext=compile(sourceText,{exports:{},require:(name:string)=>name==='./data'?{CARD_MAP,QUALITY,LEGACY_ECONOMY,LEGACY_RARITY,legacyUnitPrice,unitShopPrice,qualityName}: {}});
 const helpers=moduleContext.exports;
 const roster=[
   {uid:'m1',defId:'sun-cub',rank:1,best:0,stars:1},
@@ -160,7 +160,7 @@ test('every MatchArena command traverses the actual parent pipeline with exactly
   });
   const child=compile(functionNode(component,'command').getText(source)+'\nglobalThis.commandForTest=command;',matchCommandScope(parent.adapter));
   for(const action of actions){
-    assert.equal(await child.commandForTest(action,{marker:action}),true);
+    assert.ok(await child.commandForTest(action,{marker:action}));
     const request=requests.at(-1)!;
     assert.equal(request.url,'/api/game/'+action);assert.equal(request.options.method,'POST');
     assert.equal(request.options.headers['X-Asteria-User'],'match-ui-user');
@@ -188,11 +188,38 @@ test('replay-only BattleArena callbacks cannot settle, abandon or restart a serv
   }
   assert.equal(commands,0);
 });
-test('sell preview uses rarity cost times three to the star power and not permanent rank',()=>{
-  const context=compile(declaration('PRICE')+'\n'+functionNode(source,'saleValue').getText(source)+'\nglobalThis.preview=saleValue;',{CARD_MAP});
-  for(const [rarity,cost] of [['R',1],['SR',2],['SSR',3]] as const){
-    const def=CARDS.find(card=>card.rarity===rarity)!;
-    for(const stars of [1,2,3])for(const rank of [1,3])assert.equal(context.preview({uid:'m',defId:def.id,rank,best:0,stars}),cost*3**(stars-1));
+test('matchInterest follows the x10 server rule: per 100 gold +10 capped at 50',()=>{
+  const context=compile(functionNode(source,'matchInterest').getText(source)+'\nglobalThis.interest=matchInterest;',{exports:{}});
+  assert.equal(context.interest(0),0);
+  assert.equal(context.interest(99),0);
+  assert.equal(context.interest(100),10);
+  assert.equal(context.interest(500),50);
+  assert.equal(context.interest(999),50);
+  assert.equal(context.interest(120),10,'120 金应显示 10 利息而非 1');
+});
+test('shopMergeCopies only counts same-quality one-star copies for the merge hint',()=>{
+  const context=compile(functionNode(source,'shopMergeCopies').getText(source)+'\nglobalThis.copies=shopMergeCopies;',{exports:{}});
+  const roster=[
+    {uid:'q1a',defId:'sun-cub',rank:1,best:0,stars:1},
+    {uid:'q1b',defId:'sun-cub',rank:1,best:0,stars:1},
+    {uid:'q3a',defId:'sun-cub',rank:3,best:0,stars:1},
+    {uid:'q1star2',defId:'sun-cub',rank:1,best:0,stars:2},
+    {uid:'other',defId:'moon-deer',rank:1,best:0,stars:1},
+  ];
+  assert.equal(context.copies(roster,'sun-cub',1),2,'只统计同品质一星');
+  assert.equal(context.copies(roster,'sun-cub',3),1);
+  assert.equal(context.copies(roster,'moon-deer',1),1);
+});
+test('sell preview uses unit basis first, falling back to the version-correct frozen price',()=>{
+  const context=compile(functionNode(source,'saleValue').getText(source)+'\nglobalThis.preview=saleValue;',{CARD_MAP,unitShopPrice,legacyUnitPrice,LEGACY_ECONOMY,LEGACY_RARITY});
+  const def=CARDS[0];
+  for(const stars of [1,2,3])for(const rank of [1,3,5]){
+    const unit={uid:'m',defId:def.id,rank,best:0,stars};
+    assert.equal(context.preview(unit),unitShopPrice(rank)*3**(stars-1),'v3 无 basis 单位按品质价 × 3^(星−1)');
+    assert.equal(context.preview(unit,3),unitShopPrice(rank)*3**(stars-1),'显式 v3 同价');
+    assert.equal(context.preview(unit,2),legacyUnitPrice(def.id,rank)*3**(stars-1),'v1/v2 存局按旧稀有度冻结价 × 3^(星−1)');
+    assert.equal(context.preview(unit,2,true),(LEGACY_ECONOMY.sellBase[LEGACY_RARITY[def.id]??'R']??10)*3**(stars-1),'legacyPricing 迁移局按旧基价（不乘品质系数），如 SSR Q3 预览 30 而非 13');
+    assert.equal(context.preview({...unit,basis:42},2,true),42,'有 basis 按累计基价（合星守恒）');
   }
 });
 
