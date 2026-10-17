@@ -10,7 +10,7 @@ function fixture(options = {}) {
   let clock = 1000000;
   const store = openStore(':memory:');
   const game = createGameService(store.db, { now: () => clock, legacyMatchStart: options.legacyMatchStart ?? true });
-  const duel = createDuelService(store.db, { now: () => clock, secureRandom: options.secureRandom ?? (() => 0.42) });
+  const duel = createDuelService(store.db, { now: () => clock, secureRandom: options.secureRandom ?? (() => 0.42), augmentsEnabled: options.augmentsEnabled ?? false });
   const login = (subject, name = subject) => {
     const user = store.login({ issuer: 'test', clientId: 'test', subject, name }).user;
     game.ensureProfile(user);
@@ -620,8 +620,8 @@ test('I01/I02：对手商店 / 背包 / 修改中的站位不在响应中；侦�
   try {
     const room = f.openRoom();
     const viewA = f.duel.view(f.A, room);
-    // 结构化断言：对手字段白名单（无商店 / 背包 / 备战 / 当前阵容）。
-    assert.deepEqual(Object.keys(viewA.opponent).sort(), ['hp', 'loadout', 'name', 'population', 'ready', 'side']);
+    // 结构化断言：对手字段白名单（无商店 / 背包 / 备战 / 当前阵容；已选星契按原作公开）。
+    assert.deepEqual(Object.keys(viewA.opponent).sort(), ['augments', 'hp', 'loadout', 'name', 'population', 'ready', 'side']);
     assert.equal(viewA.scout, null, '首轮备战期间没有可侦察的已冻结轮');
     const rule = duelRoundRule(1);
     f.step(rule.planningSec * 1000);
@@ -868,7 +868,7 @@ test('迁移：同座重复的进行中房间原子终止并释放全部锁；lo
     // (b) lobby 房间两个 B 座（B、A 均为后注入，保留最早行）。
     f.store.db.prepare('INSERT INTO duel_participants(room_id,user_id,side,name,state,last_seen_at) VALUES(?,?,?,?,?,?)').run(lobby.roomId, f.B.id, 'B', '玩家乙', staleState, f.clock());
     f.store.db.prepare('INSERT INTO duel_participants(room_id,user_id,side,name,state,last_seen_at) VALUES(?,?,?,?,?,?)').run(lobby.roomId, f.A.id, 'B', '玩家甲', staleState, f.clock());
-    const duel2 = createDuelService(f.store.db, { now: () => f.clock() });
+    const duel2 = createDuelService(f.store.db, { now: () => f.clock(), augmentsEnabled: false });
     const roomRow = f.store.db.prepare('SELECT * FROM duel_rooms WHERE id=?').get(bad);
     assert.equal(roomRow.status, 'finished', '坏房间被原子终止，不能只删参与者');
     assert.equal(roomRow.finish_reason, 'service_interrupted');
@@ -931,7 +931,7 @@ test('迁移：只有两个 B 的 lobby、留守者已准备 → 去重后 ready
     f.store.db.prepare('INSERT INTO duel_participants(room_id,user_id,side,name,state,last_seen_at) VALUES(?,?,?,?,?,?)')
       .run(created.roomId, f.C.id, 'B', '玩家丙', JSON.stringify({ hp: 32, activity: { meaningfulRounds: [], deployedDefIds: [] } }), f.clock());
     const revisionBefore = f.store.db.prepare('SELECT revision FROM duel_rooms WHERE id=?').get(created.roomId).revision;
-    const duel2 = createDuelService(f.store.db, { now: () => f.clock() });
+    const duel2 = createDuelService(f.store.db, { now: () => f.clock(), augmentsEnabled: false });
     // 去重保留留守 B，但 ready 被重置、房间 revision 递增。
     const survivor = f.store.db.prepare('SELECT * FROM duel_participants WHERE room_id=?').get(created.roomId);
     assert.equal(survivor.user_id, f.B.id);
@@ -1088,7 +1088,7 @@ for (const round of [1, 99]) test('强制收口后的坏房间可读取安全终
     assert.equal(f.store.db.prepare('SELECT COUNT(*) n FROM duel_pair_quota').get().n, 0);
     assert.equal(f.store.db.prepare("SELECT COUNT(*) n FROM active_game_locks WHERE kind='duel' AND ref_id=?").get(room).n, 0);
     assert.throws(() => f.duel.view(f.C, room), error => error.status === 403, '摘要仍需成员权限');
-    const restarted = createDuelService(f.store.db, { now: f.clock });
+    const restarted = createDuelService(f.store.db, { now: f.clock, augmentsEnabled: false });
     assert.equal(restarted.view(f.A, room).self.reward.reason, 'service_abort');
     assert.ok(f.openRoom(), '双方可正常重开');
   } finally { f.close(); }
@@ -1138,5 +1138,137 @@ test('正常收口管线可用的服务异常也清除旧胜负，取消不计�
     assert.equal(view.self.reward.reason, 'service_abort');
     assert.equal(f.store.db.prepare('SELECT COUNT(*) n FROM reward_quota').get().n, 0);
     assert.equal(f.store.db.prepare('SELECT COUNT(*) n FROM duel_pair_quota').get().n, 0);
+  } finally { f.close(); }
+});
+
+test('星契：R2 三选一双方同候选；手动选择公开，未选方到期自动选第一项', () => {
+  const f = fixture({ augmentsEnabled: true });
+  try {
+    const room = f.openRoom();
+    const r1 = duelRoundRule(1);
+    f.step(r1.planningSec * 1000);
+    f.step(r1.combatPresentationSec * 1000);
+    f.step(r1.settlementSec * 1000);
+    const a = f.duel.view(f.A, room), b = f.duel.view(f.B, room);
+    assert.equal(a.room.round, 2);
+    assert.ok(a.self.pendingAugmentOffer, 'R2 备战必须出现星契三选一');
+    assert.equal(a.self.pendingAugmentOffer.tier, 1);
+    assert.equal(a.self.pendingAugmentOffer.candidates.length, 3);
+    assert.deepEqual(a.self.pendingAugmentOffer.candidates, b.self.pendingAugmentOffer.candidates, '双方同候选，避免随机不公平');
+    const chosen = a.self.pendingAugmentOffer.candidates[1];
+    assert.throws(() => f.cmd(f.A, 'augment.select', { augmentId: 'not-a-real-augment' }), /候选中没有这张星契/);
+    const after = f.cmd(f.A, 'augment.select', { augmentId: chosen });
+    assert.deepEqual(after.self.augments, [chosen]);
+    assert.equal(after.self.pendingAugmentOffer, null);
+    assert.deepEqual(f.duel.view(f.B, room).opponent.augments, [chosen], '已选星契对对手公开（可侦察）');
+    assert.throws(() => f.cmd(f.A, 'augment.select', { augmentId: chosen }), /没有待选择的星契/);
+    // B 不选：跨过 R2 备战截止，按候选顺序自动选第一项。
+    f.step(duelRoundRule(2).planningSec * 1000);
+    const stateB = f.readState(room, f.B);
+    assert.deepEqual(stateB.augments, [b.self.pendingAugmentOffer.candidates[0]]);
+    assert.equal(f.duel.view(f.B, room).self.pendingAugmentOffer, null);
+  } finally { f.close(); }
+});
+
+test('星契：R5 / R8 按档位出现，连续选择推进至终局不崩溃', () => {
+  const f = fixture({ augmentsEnabled: true });
+  try {
+    const room = f.openRoom();
+    const seen = [];
+    for (let round = 1; round <= 10; round++) {
+      const view = f.duel.view(f.A, room);
+      if (view.room.status === 'finished') break; // 生命归零可早于 R10 结束，属正常终局
+      assert.equal(view.room.round, round);
+      const offer = view.self.pendingAugmentOffer;
+      if (offer) {
+        seen.push([round, offer.tier]);
+        f.cmd(f.A, 'augment.select', { augmentId: offer.candidates[0] });
+        f.cmd(f.B, 'augment.select', { augmentId: offer.candidates[1] });
+      }
+      const rule = duelRoundRule(round);
+      f.step(rule.planningSec * 1000);
+      f.step(rule.combatPresentationSec * 1000);
+      f.step(rule.settlementSec * 1000);
+    }
+    assert.deepEqual(seen, [[2, 1], [5, 2], [8, 3]]);
+    const stateA = f.readState(room, f.A);
+    assert.equal(stateA.augments.length, 3, '正常推进到 R8 后应有且仅有三张星契');
+    assert.equal(f.duel.view(f.A, room).room.status, 'finished', '十轮后房间必须落定');
+  } finally { f.close(); }
+});
+
+test('星契：v1 存续房间不生成星契，规则版本隔离', () => {
+  const f = fixture({ augmentsEnabled: true });
+  try {
+    const room = f.openRoom();
+    f.store.db.prepare('UPDATE duel_rooms SET rules_version=1 WHERE id=?').run(room);
+    const r1 = duelRoundRule(1);
+    f.step(r1.planningSec * 1000);
+    f.step(r1.combatPresentationSec * 1000);
+    f.step(r1.settlementSec * 1000);
+    const view = f.duel.view(f.A, room);
+    assert.equal(view.room.round, 2);
+    assert.equal(view.self.pendingAugmentOffer, null);
+    assert.deepEqual(view.self.augments, []);
+  } finally { f.close(); }
+});
+
+test('星契效果：野怪金币 / 候选、利息上限、免费刷新、商店格、人口与第三装备槽', () => {
+  const f = fixture({ augmentsEnabled: true });
+  try {
+    const room = f.openRoom();
+    // R1 备战：给 A 注入「战利品风暴 + 细水长流」，验证野怪金币翻倍、候选 +1、利息上限 +1。
+    f.writeState(room, f.A, state => {
+      state.augments = ['t3_lootstorm', 't1_compound'];
+      state.gold = 100;
+    });
+    const r1 = duelRoundRule(1);
+    f.step(r1.planningSec * 1000);
+    f.step(r1.combatPresentationSec * 1000);
+    const settled = f.duel.view(f.A, room);
+    assert.equal(settled.self.lastIncome.neutralGuaranteed, 24, '12 金 × 2 = 24');
+    assert.equal(settled.self.lastIncome.interest, 3, '100 金在 +1 利息上限下取 3');
+    assert.equal(settled.self.pendingItemChoice.candidates.length, 4, '装备候选 3 + 1');
+    assert.equal(f.duel.view(f.B, room).self.pendingItemChoice.candidates.length, 3, '无星契方仍是三选一');
+    f.step(r1.settlementSec * 1000);
+    // R2 备战：免费刷新 + 商店 6 格 + 刷新 −2。
+    f.writeState(room, f.A, state => {
+      state.augments = ['t1_wide_shelf', 't1_light_reroll', 't2_free_reroll'];
+      state.pendingAugmentOffer = null;
+      state.freeRerolls = 1;
+    });
+    const beforeFree = f.duel.view(f.A, room).self.gold;
+    const free = f.cmd(f.A, 'reroll', {});
+    assert.equal(free.self.gold, beforeFree, '第一次刷新免费');
+    assert.equal(free.self.shop.length, 6, '商店 5 + 1 格');
+    assert.equal(free.self.freeRerolls, 0);
+    const beforePaid = free.self.gold;
+    const paid = f.cmd(f.A, 'reroll', {});
+    assert.equal(paid.self.gold, beforePaid - 8, '刷新 10 − 2 = 8');
+    // R2 结束进入 R3：人口 4 + 第六席 1 = 5。
+    f.writeState(room, f.A, state => { state.augments = ['t3_sixth_seat']; });
+    f.step(duelRoundRule(2).planningSec * 1000);
+    f.step(duelRoundRule(2).combatPresentationSec * 1000);
+    f.step(duelRoundRule(2).settlementSec * 1000);
+    assert.equal(f.duel.view(f.A, room).self.population, 5);
+    // 第三装备槽：三件可穿，第四件拒绝。
+    f.writeState(room, f.A, state => {
+      state.augments = ['t2_third_slot'];
+      state.items.push(
+        { itemId: 'it1', itemDefId: 'edge_sigil', kind: 'complete' },
+        { itemId: 'it2', itemDefId: 'astral_lens', kind: 'complete' },
+        { itemId: 'it3', itemDefId: 'stone_mail', kind: 'complete' },
+        { itemId: 'it4', itemDefId: 'dawn_charm', kind: 'complete' },
+      );
+    });
+    const unitId = f.readState(room, f.A).roster[0].unitId;
+    f.cmd(f.A, 'item.equip', { itemId: 'it1', unitId });
+    f.cmd(f.A, 'item.equip', { itemId: 'it2', unitId });
+    f.cmd(f.A, 'item.equip', { itemId: 'it3', unitId });
+    assert.throws(() => f.cmd(f.A, 'item.equip', { itemId: 'it4', unitId }), /最多装备 3 件/);
+    // 星冕装备洪流：4 槽（与第三槽叠加时 5 槽，但单张只到 4）。
+    f.writeState(room, f.A, state => { state.augments = ['t3_item_overflow']; });
+    f.cmd(f.A, 'item.equip', { itemId: 'it4', unitId });
+    assert.equal(f.readState(room, f.A).roster.find(u => u.unitId === unitId).equippedItemIds.length, 4);
   } finally { f.close(); }
 });

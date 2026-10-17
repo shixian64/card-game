@@ -16,6 +16,8 @@ import { DUEL_ITEMS } from '../src/equipment.ts';
 import { DUEL_RULES_VERSION, DUEL_LOADOUT, DUEL_STARS, duelShopPrice, duelRoundRule } from '../src/duel-rules.ts';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+// 此脚本只重放 / 生成 v1 黄金基线；产品规则可以继续升版，但 v1 证据不覆盖。
+const BASELINE_RULES_VERSION = 1;
 const sha = value => createHash('sha256').update(value).digest('hex');
 const roleOf = defId => getCombatStats({ uid: 'audit', defId, rank: 1, best: 0 }).role;
 const front = role => ['坦克', '战士'].includes(role);
@@ -117,13 +119,14 @@ export function summarizeSamples(samples) {
 }
 
 export function buildBaseline({ positionCount = 20, fixedSeedCount = 300 } = {}) {
-  assert.equal(DUEL_RULES_VERSION, 1, '此基线脚本仅用于 v1；v2 应另建对照，不覆盖 v1');
+  assert.equal(BASELINE_RULES_VERSION, 1, '此基线脚本仅用于 v1；v2 应另建对照，不覆盖 v1');
+  assert.ok(DUEL_RULES_VERSION >= BASELINE_RULES_VERSION, '产品规则版本不能低于 v1');
   assert.ok(Number.isInteger(fixedSeedCount) && fixedSeedCount >= 2 && fixedSeedCount <= 1000);
   for (const a of BASELINE_ARCHETYPES) validateArchetype(a);
   const formations = BASELINE_ARCHETYPES.map((a, i) => sampleFormations(a, positionCount, 0x41535445 + i * 7919));
   const allSamples = [], goldens = new Map();
   function run(input, swapped, golden = false) {
-    const started = performance.now(), result = simulateDuel(input), elapsedMs = performance.now() - started;
+    const started = performance.now(), result = simulateDuel({ ...input, rulesVersion: BASELINE_RULES_VERSION }), elapsedMs = performance.now() - started;
     const serialized = JSON.stringify(result), resultHash = sha(serialized);
     const logs = result.frames.flatMap(f => f.logs), last = result.frames.at(-1);
     const damage = Object.fromEntries((swapped ? last.sideB : last.sideA).map(u => [u.defId ?? u.unitId, u.damageDealt]));
@@ -216,7 +219,7 @@ export function buildBaseline({ positionCount = 20, fixedSeedCount = 300 } = {})
     'src/neutral.ts', 'src/hex.ts', 'server/duel.mjs', 'scripts/opt0-baseline.mjs'].map(path => [path, sha(readFileSync(resolve(ROOT, path)))]));
   let gitHead = null;
   try { gitHead = execFileSync('git', ['rev-parse', 'HEAD'], { cwd: ROOT, encoding: 'utf8' }).trim(); } catch { /* 文件哈希仍可复核。 */ }
-  return { schemaVersion: 1, generatedAt: new Date().toISOString(), userDate: '2026-10-15', rulesVersion: DUEL_RULES_VERSION,
+  return { schemaVersion: 1, generatedAt: new Date().toISOString(), userDate: '2026-10-15', rulesVersion: BASELINE_RULES_VERSION,
     provenance: { node: process.version, gitHead, files, note: '文件哈希对应运行时工作树，不仅是 HEAD；耗时受机器与并发负载影响。' },
     methodology: { positionCount, parityCases: [0, 1], swapSeats: true, independentSeedSamples: false,
       matrixEquipment: 'none_controlled', ownershipAssumption: '离线夹具假定拥有八卡种且最高 Q5，非真实用户收藏',

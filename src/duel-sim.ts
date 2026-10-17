@@ -14,6 +14,8 @@ import { ROLE_BASE_STATS, CARD_COMBAT_DEFS, getSynergies, affinityMultiplier, ge
 import type { CombatRole, Synergy } from './battle.ts';
 import { hexDistance, slotToCell, rotate180, neighbors as hexNeighbors, boardCells, HEX_COLS } from './hex.ts';
 import { aggregateEquipment } from './equipment.ts';
+import { aggregateAugmentEffects, applyAugmentTraitBonuses, AUGMENT_MAX } from './augments.ts';
+import type { AggregatedAugmentEffects } from './augments.ts';
 import type { NeutralUnitSpec } from './neutral.ts';
 import { DUEL_COMBAT, DUEL_QUALITY, DUEL_STARS } from './duel-rules.ts';
 
@@ -32,6 +34,8 @@ export type DuelSideUnit = DuelCardUnitInput | ({ kind: 'neutral' } & NeutralUni
 export interface DuelSideInput {
   units: ReadonlyArray<DuelSideUnit>;
   formation: ReadonlyArray<{ unitId: string; localSlot: number }>; // 该方本地 0–27，全部单位都必须有站位
+  /** 本局已选星契（服务端冻结快照；只影响该方，最多三个）。 */
+  augments?: ReadonlyArray<string>;
 }
 export interface DuelLog {
   id: number; round: number; side: DuelSideId | 'system';
@@ -62,6 +66,8 @@ export interface DuelSimInput {
   sideA: DuelSideInput;
   sideB: DuelSideInput;
   maxLogicalRounds?: number;         // 默认 DUEL_COMBAT.logicalRoundLimit=24
+  /** 房间规则版本：缺省 1（旧存续局 / 旧 golden）；新房间传 2，启用镜像公平走位。 */
+  rulesVersion?: number;
 }
 
 interface RuntimeUnit extends DuelResultUnit {
@@ -73,6 +79,7 @@ interface SimState {
   A: RuntimeUnit[]; B: RuntimeUnit[];
   round: number; logs: DuelLog[]; nextLog: number;
   synergies: { A: Synergy[]; B: Synergy[] };
+  rulesVersion: number;
 }
 function ensure(condition: unknown, message: string): asserts condition { if (!condition) throw new Error(message); }
 function decimal(value: number): number { return Math.round(value * 10) / 10; }
@@ -81,6 +88,8 @@ const ACTOR_ROW_ASC: Record<DuelSideId, boolean> = { A: true, B: false };
 
 function other(side: DuelSideId): DuelSideId { return side === 'A' ? 'B' : 'A'; }
 function combatDistance(a: { row: number; col: number }, b: { row: number; col: number }): number { return hexDistance(a, b); }
+/** 平局用的“阵营相对列”：B 端物理列先镜像回本地列，避免 180° 旋转后固定偏向某一侧。 */
+function laneCol(side: DuelSideId, col: number): number { return side === 'A' ? col : HEX_COLS - 1 - col; }
 
 /** 各方本地 slot → 物理格：A 走 slotToCell(player)；B / 中立方再经 180° 旋转到上半场。 */
 export function duelSideCell(localSlot: number, side: DuelSideId): { row: number; col: number } {
@@ -88,15 +97,18 @@ export function duelSideCell(localSlot: number, side: DuelSideId): { row: number
   return side === 'A' ? cell : rotate180(cell);
 }
 
-function buildCardUnit(input: DuelCardUnitInput, side: DuelSideId, localSlot: number, synergies: Synergy[]): RuntimeUnit {
+function buildCardUnit(input: DuelCardUnitInput, side: DuelSideId, localSlot: number, synergies: Synergy[], augments: AggregatedAugmentEffects): RuntimeUnit {
   ensure(CARD_MAP[input.defId] && CARD_COMBAT_DEFS[input.defId], '未知战斗卡牌：' + input.defId);
   ensure(Number.isInteger(input.quality) && input.quality >= 1 && input.quality <= QUALITY_MAX, '本局品质不合法');
   ensure(input.stars >= 1 && input.stars <= DUEL_STARS.maxStars, '局内星级不合法');
   const def = CARD_MAP[input.defId], base = ROLE_BASE_STATS[def.art], variant = CARD_COMBAT_DEFS[input.defId];
-  const equip = aggregateEquipment([...(input.itemDefIds ?? [])]);
-  // 应用顺序（设计文档 9.3）：基础 → 品质 → 星级 → 装备（同类百分比先相加）→ 羁绊 → 一次性护盾。
+  const equip = aggregateEquipment([...(input.itemDefIds ?? [])], 1 + augments.itemPowerPct);
+  // 应用顺序（设计文档 9.3）：基础 → 品质 → 星级 → 装备（同类百分比先相加）→
+  // 星契（同类百分比先相加）→ 羁绊 → 一次性护盾。
   let hp = Math.round(base.hp * DUEL_QUALITY.hpMultiplier[input.quality - 1] * DUEL_STARS.hpMultiplier[input.stars - 1] * (1 + equip.maxHpPct));
   let attack = decimal(base.attack * DUEL_QUALITY.attackMultiplier[input.quality - 1] * DUEL_STARS.attackMultiplier[input.stars - 1] * (1 + equip.attackPct));
+  hp = Math.round(hp * (1 + augments.hpPct + (augments.roleHpPct[base.role] ?? 0)));
+  attack = decimal(attack * (1 + augments.attackPct + (augments.roleAttackPct[base.role] ?? 0)));
   const skillFactor = DUEL_QUALITY.skillCoefficientMultiplier[input.quality - 1] * DUEL_STARS.skillCoefficientMultiplier[input.stars - 1] * (1 + equip.skillCoefficientPct);
   const skillPower = Number((variant.power * skillFactor).toFixed(4));
   const skillSecondary = Number((variant.secondary * skillFactor).toFixed(4));
@@ -106,14 +118,15 @@ function buildCardUnit(input: DuelCardUnitInput, side: DuelSideId, localSlot: nu
   if (def.affinity === 'sun') attack = decimal(attack * (active('affinity-sun-4') ? 1.18 : active('affinity-sun-2') ? 1.08 : 1));
   if (base.role === '战士' && active('role-warrior')) attack = decimal(attack * 1.12);
   let shield = def.affinity === 'moon' ? Math.round(hp * (active('affinity-moon-4') ? 0.25 : active('affinity-moon-2') ? 0.12 : 0)) : 0;
-  // 装备开局护盾：一次性（一场一次）；总量上限已在 aggregateEquipment 内按最终 HP 25% 截断。
-  shield += Math.round(hp * equip.openingShieldMaxHpPct);
+  // 装备 + 星契的开局护盾合计上限 25%（设计文档 9.3 / 星契说明）；月系羁绊护盾不在此上限内。
+  const openingShieldPct = Math.min(0.25, equip.openingShieldMaxHpPct + augments.openingShieldPct);
+  shield += Math.round(hp * openingShieldPct);
   const cell = duelSideCell(localSlot, side);
   return {
     unitId: side + ':' + input.unitId, side, kind: 'card', defId: input.defId, name: def.name, role: base.role,
     quality: input.quality, stars: input.stars, itemDefIds: [...(input.itemDefIds ?? [])],
-    maxHp: hp, hp, shield, attack, armor: (variant.armor ?? base.armor) + equip.armorFlat,
-    resistance: variant.resistance ?? base.resistance, range: variant.range ?? base.range, speed: base.speed,
+    maxHp: hp, hp, shield, attack, armor: (variant.armor ?? base.armor) + equip.armorFlat + augments.armorFlat,
+    resistance: (variant.resistance ?? base.resistance) + augments.resistanceFlat, range: variant.range ?? base.range, speed: base.speed,
     energy: 30, localSlot, row: cell.row, col: cell.col,
     skillName: variant.skillName, affinity: def.affinity, damageDealt: 0, basicCount: 0,
     skillPower, skillSecondary, effect: base.effect,
@@ -222,7 +235,8 @@ function openingBlink(state: SimState, actor: RuntimeUnit, enemies: RuntimeUnit[
     .filter(cell => !occupied.has(cell.row * HEX_COLS + cell.col))
     .sort((a, b) => combatDistance(a, rear) - combatDistance(b, rear)
       || (ACTOR_ROW_ASC[actor.side] ? a.row - b.row : b.row - a.row)
-      || Math.abs(a.col - actor.col) - Math.abs(b.col - actor.col) || a.col - b.col);
+      || Math.abs(a.col - actor.col) - Math.abs(b.col - actor.col)
+      || (state.rulesVersion >= 2 ? laneCol(actor.side, a.col) - laneCol(actor.side, b.col) : a.col - b.col));
   const destination = cells[0], distance = combatDistance(actor, destination);
   if (distance === 0) return;
   actor.row = destination.row; actor.col = destination.col;
@@ -235,9 +249,10 @@ function moveToward(state: SimState, actor: RuntimeUnit, target: RuntimeUnit): v
   for (let index = 0; index < queue.length; index++) {
     const current = queue[index];
     if (current.first !== -1 && combatDistance(current, target) <= actor.range) { destination = { row: Math.floor(current.first / HEX_COLS), col: current.first % HEX_COLS }; break; }
-    // 平局规则与阵营无关：先到目标距离，再横向列距，最后列号。
+    // 平局规则与阵营无关：先到目标距离，再横向列距，最后“阵营相对列号”。
     const steps = hexNeighbors(current)
-      .sort((a, b) => combatDistance(a, target) - combatDistance(b, target) || Math.abs(a.col - target.col) - Math.abs(b.col - target.col) || a.col - b.col);
+      .sort((a, b) => combatDistance(a, target) - combatDistance(b, target) || Math.abs(a.col - target.col) - Math.abs(b.col - target.col)
+        || (state.rulesVersion >= 2 ? laneCol(actor.side, a.col) - laneCol(actor.side, b.col) : a.col - b.col));
     for (const next of steps) {
       const key = next.row * HEX_COLS + next.col;
       if (seen.has(key) || occupied.has(key)) continue;
@@ -270,19 +285,32 @@ function thinFrames(frames: DuelFrame[], limit: number): DuelFrame[] {
 export function simulateDuel(input: DuelSimInput): DuelSimResult {
   ensure(input && Number.isInteger(input.roundNumber) && input.roundNumber >= 1, '轮次不合法');
   ensure(Number.isInteger(input.combatSeed) && input.combatSeed >= 0 && input.combatSeed <= 0xffffffff, '战斗种子不合法');
+  const rulesVersion = input.rulesVersion ?? 1;
+  ensure(Number.isInteger(rulesVersion) && rulesVersion >= 1, '规则版本不合法');
   const maxRounds = input.maxLogicalRounds ?? DUEL_COMBAT.logicalRoundLimit;
-  const sideA = validateSide(input.sideA, 'A 方', 6), sideB = validateSide(input.sideB, 'B 方', 6);
-  // 羁绊只按不同 defId 计数；中立方无羁绊。
-  const synergyCards = (side: ValidatedSide): Synergy[] => {
-    const cards = side.specs.map(s => s.unit).filter(isCardUnit);
-    return cards.length ? getSynergies(cards.map(c => ({ uid: c.unitId, defId: c.defId, rank: c.quality, best: 0, stars: c.stars }))) : [];
+  // 星契在人口 7 的「第六席」下需要允许 7 个单位；旧 6 人上限仍由规则 / 服务端控制。
+  const sideA = validateSide(input.sideA, 'A 方', 7), sideB = validateSide(input.sideB, 'B 方', 7);
+  const augmentIdsOf = (side: DuelSideInput, label: string): ReadonlyArray<string> => {
+    const ids = side.augments ?? [];
+    ensure(Array.isArray(ids) && ids.length <= AUGMENT_MAX, label + '星契数量不合法');
+    return ids;
   };
-  const synergies = { A: synergyCards(sideA), B: synergyCards(sideB) };
+  const augmentEffects = {
+    A: aggregateAugmentEffects(augmentIdsOf(input.sideA, 'A 方')),
+    B: aggregateAugmentEffects(augmentIdsOf(input.sideB, 'B 方')),
+  };
+  // 羁绊只按不同 defId 计数；中立方无羁绊；星契的徽记 / 共鸣在此追加计数。
+  const synergyCards = (side: ValidatedSide, sideId: DuelSideId): Synergy[] => {
+    const cards = side.specs.map(s => s.unit).filter(isCardUnit);
+    const base = cards.length ? getSynergies(cards.map(c => ({ uid: c.unitId, defId: c.defId, rank: c.quality, best: 0, stars: c.stars })), 7) : [];
+    return applyAugmentTraitBonuses(base, augmentEffects[sideId].traitBonuses);
+  };
+  const synergies = { A: synergyCards(sideA, 'A'), B: synergyCards(sideB, 'B') };
   const build = (side: ValidatedSide, id: DuelSideId): RuntimeUnit[] => side.specs.map(spec =>
     spec.unit.kind === 'neutral'
       ? buildNeutralUnit(spec.unit, id)
-      : buildCardUnit(spec.unit, id, spec.slot, synergies[id]));
-  const state: SimState = { A: build(sideA, 'A'), B: build(sideB, 'B'), round: 1, logs: [], nextLog: 2, synergies };
+      : buildCardUnit(spec.unit, id, spec.slot, synergies[id], augmentEffects[id]));
+  const state: SimState = { A: build(sideA, 'A'), B: build(sideB, 'B'), round: 1, logs: [], nextLog: 2, synergies, rulesVersion };
   const frames: DuelFrame[] = [];
   let winner: DuelSideId | null = null, reason: DuelSimResult['reason'] = 'round-limit';
   if (state.A.length === 0 || state.B.length === 0) {

@@ -64,20 +64,25 @@ export function duelItemDef(id: string): ItemDef {
   if (!def) throw new Error('未知装备：' + id);
   return def;
 }
-/** 装备层聚合：同类百分比先相加再乘基础层；平值护甲最后加一次（应用顺序见设计文档 9.3）。 */
+/**
+ * 装备层聚合：同类百分比先相加再乘基础层；平值护甲最后加一次（应用顺序见设计文档 9.3）。
+ * powerPct 是「装备精通 / 装备洪流」星契的倍率（1 = 原效果），只放大装备自身效果，
+ * 不改变能量 / 每三次普攻等触发规则。
+ */
 export interface EquipmentAggregate {
   attackPct: number; skillCoefficientPct: number; maxHpPct: number; armorFlat: number;
   openingShieldMaxHpPct: number; energyOnBasic: number; everyNBasic: number | null; extraPhysicalAttackRatio: number;
 }
-export function aggregateEquipment(itemIds: ReadonlyArray<string>): EquipmentAggregate {
+export function aggregateEquipment(itemIds: ReadonlyArray<string>, powerPct = 1): EquipmentAggregate {
   const agg: EquipmentAggregate = { attackPct: 0, skillCoefficientPct: 0, maxHpPct: 0, armorFlat: 0, openingShieldMaxHpPct: 0, energyOnBasic: 0, everyNBasic: null, extraPhysicalAttackRatio: 0 };
+  const scale = (value: number) => value * powerPct;
   for (const id of itemIds) {
     const def = duelItemDef(id), e = def.effects;
-    agg.attackPct += e.attackPct ?? 0;
-    agg.skillCoefficientPct += e.skillCoefficientPct ?? 0;
-    agg.maxHpPct += e.maxHpPct ?? 0;
-    agg.armorFlat += e.armorFlat ?? 0;
-    agg.openingShieldMaxHpPct += e.openingShieldMaxHpPct ?? 0;
+    agg.attackPct += scale(e.attackPct ?? 0);
+    agg.skillCoefficientPct += scale(e.skillCoefficientPct ?? 0);
+    agg.maxHpPct += scale(e.maxHpPct ?? 0);
+    agg.armorFlat += Math.round(scale(e.armorFlat ?? 0));
+    agg.openingShieldMaxHpPct += scale(e.openingShieldMaxHpPct ?? 0);
     agg.energyOnBasic += e.energyOnBasic ?? 0;
     if (e.everyNBasic !== undefined) {
       agg.everyNBasic = agg.everyNBasic === null ? e.everyNBasic : Math.min(agg.everyNBasic, e.everyNBasic);
@@ -88,11 +93,12 @@ export function aggregateEquipment(itemIds: ReadonlyArray<string>): EquipmentAgg
   return agg;
 }
 /**
- * 穿戴校验：两槽 / 单位；同 uniqueGroup 一单位不得重复（背包可以存重复）。
+ * 穿戴校验：默认两槽 / 单位；同 uniqueGroup 一单位不得重复（背包可以存重复）。
+ * slots 由房间服务按星契传入（第三 / 第四槽），默认值保持旧规则不变。
  * 入参是装备定义 id（实例归属由房间服务校验），非法定义直接抛错。
  */
-export function validateEquip(equippedDefIds: ReadonlyArray<string>, newItemDefId: string): void {
+export function validateEquip(equippedDefIds: ReadonlyArray<string>, newItemDefId: string, slots: number = DUEL_EQUIPMENT.slotsPerUnit): void {
   const def = duelItemDef(newItemDefId);
-  if (equippedDefIds.length >= DUEL_EQUIPMENT.slotsPerUnit) throw new Error('每个单位最多装备 2 件');
+  if (equippedDefIds.length >= slots) throw new Error('每个单位最多装备 ' + slots + ' 件');
   if (equippedDefIds.some(id => duelItemDef(id).uniqueGroup === def.uniqueGroup)) throw new Error('同组装备不能重复穿戴在同一单位');
 }

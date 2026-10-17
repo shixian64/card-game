@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Coins, Heart, Info, LoaderCircle, Sparkles, Swords, Trophy, Users, X } from 'lucide-react';
-import { CARDS, CARD_MAP, QUALITY_TIERS, qualityName } from './data';
+import { CARDS, CARD_MAP, AFFINITIES, QUALITY_TIERS, qualityName } from './data';
 import type { OwnedCardV2 } from './engine';
-import { getCombatStats } from './battle';
+import { getCombatStats, getSynergies } from './battle';
 import { rotate180, cellCenter } from './hex';
 import { DUEL_ITEMS } from './equipment';
 import type { ItemDef } from './equipment';
+import {
+  AUGMENT_MAP, AUGMENT_TIERS, AUGMENT_CATEGORY_NAMES, aggregateAugmentEffects, applyAugmentTraitBonuses,
+} from './augments';
 import { createDuelHeartbeat } from './duel-session';
 import './duel-arena.css';
 
@@ -25,6 +28,9 @@ export interface DuelPlayerView {
   roster: DuelRosterUnit[]; formation: DuelFormationEntry[]; items: DuelItemInstance[];
   lastIncome: { interest: number; neutralGuaranteed: number; neutralWinBonus: number; pvpSupply: number; total: number } | null;
   pendingItemChoice: { round: number; candidates: string[]; expiresPhaseId: string; status: string } | null;
+  augments: string[];
+  pendingAugmentOffer: { round: number; tier: 1 | 2 | 3; candidates: string[]; expiresPhaseId: string } | null;
+  rerollCost: number; freeRerolls: number; shopSlots: number; itemSlots: number; populationBonus: number;
   reward?: { base: number; factor: number; actualCoins: number; reason: string } | null;
 }
 export interface DuelRoomView {
@@ -36,7 +42,7 @@ export interface DuelScout { round: number; side: 'A' | 'B'; units: { unitId: st
 export interface DuelView {
   room: DuelRoomView;
   self: DuelPlayerView;
-  opponent: { side: 'A' | 'B'; name: string; ready: boolean; loadout: DuelLoadout | null; hp: number; population: number } | null;
+  opponent: { side: 'A' | 'B'; name: string; ready: boolean; loadout: DuelLoadout | null; hp: number; population: number; augments: string[] } | null;
   scout: DuelScout | null;
   currentBattle: { round: number; kind: string; status: string; summary: Record<string, unknown> | null; battleIds: string[] } | null;
 }
@@ -67,8 +73,8 @@ function stopDuelHeartbeat() { duelHeartbeat.stop(); }
 function syncDuelHeartbeat(userId: string, roomId: string) {
   duelHeartbeat.sync(userId, roomId);
 }
-const FRONT_SLOTS = [1, 3, 5, 8, 10, 12];
-const BACK_SLOTS = [22, 24, 26, 15, 17, 19];
+const FRONT_SLOTS = [1, 3, 5, 8, 10, 12, 2];
+const BACK_SLOTS = [22, 24, 26, 15, 17, 19, 21];
 function roleOf(defId: string): string { return getCombatStats({ uid: 'x', defId, rank: 1, best: 0 }).role; }
 function isMelee(defId: string): boolean { return ['坦克', '战士', '刺客'].includes(roleOf(defId)); }
 /** 本人视角的推荐布阵（与服务器 autoPlacement 同规则：近战前排、远程后排）。 */
@@ -79,6 +85,15 @@ function suggestFormation(roster: DuelRosterUnit[], population: number): DuelFor
   return units.map(unit => ({ unitId: unit.unitId, localSlot: isMelee(unit.defId) ? FRONT_SLOTS[front++] ?? 12 : BACK_SLOTS[back++] ?? 19 }));
 }
 function itemDefOf(id: string): ItemDef { return DUEL_ITEMS.find(item => item.id === id) ?? DUEL_ITEMS[0]; }
+/** 羁绊显示名：getSynergies 的 name 是「2 月 / 双坦克」，面板里改成「月 / 坦克」。 */
+function synergyLabel(id: string, name: string): string {
+  if (id.startsWith('affinity-')) {
+    const key = id.split('-')[1] as keyof typeof AFFINITIES;
+    return AFFINITIES[key]?.name ?? name;
+  }
+  if (id.startsWith('role-')) return name.replace(/^双/, '');
+  return name;
+}
 // 无奖励 / 衰减原因（服务端 eligibility 的 reason 集合）：终局必须明说原因，不能只说“无奖励”（12.2）。
 const REWARD_REASON_LABELS: Record<string, string> = {
   forfeited: '主动投降或长期掉线判负，本局无奖励',
@@ -345,6 +360,16 @@ export default function DuelArena({ userId, cards, onRewardClaimed, onBack }: { 
   const room = view.room;
   const self = view.self;
   const opponent = view.opponent;
+  // 与战斗内核同一套计数 + 星契徽记：面板不是另算一份预览。
+  const synergyCards = effectiveFormation.flatMap(entry => {
+    const unit = self.roster.find(item => item.unitId === entry.unitId);
+    return unit ? [{ uid: unit.unitId, defId: unit.defId, rank: unit.quality, best: 0, stars: unit.stars }] : [];
+  });
+  const synergyList = applyAugmentTraitBonuses(
+    synergyCards.length ? getSynergies(synergyCards, 7) : [],
+    aggregateAugmentEffects((self.augments ?? []).filter(id => AUGMENT_MAP[id])).traitBonuses,
+  ).filter(synergy => synergy.count > 0)
+    .sort((a, b) => Number(b.active) - Number(a.active) || b.count - a.count || a.threshold - b.threshold || a.id.localeCompare(b.id));
 
   // ── 房间准备页（lobby：牌组 / 品质 / 开局副本 / 双方准备）─────────────────
   if (room.status === 'lobby') {
@@ -448,11 +473,22 @@ export default function DuelArena({ userId, cards, onRewardClaimed, onBack }: { 
       <div className="duel-hud-mid">
         <span className="duel-round">R{room.round}/10 · {room.kind === 'neutral' ? '野怪补给' : '双方交锋'}</span>
         <span className="duel-timer">{inPlanning || room.phase === 'combat' ? secondsLeft + 's' : room.phase === 'simulating' ? '战斗演算中…' : '结算中…'}</span>
-        <span className="duel-pop">人口 {self.population}{room.round < 10 ? ` → 下轮 ${[3, 3, 4, 4, 5, 5, 6, 6, 6, 6][room.round]}` : ''}</span>
+        <span className="duel-pop">人口 {self.population}{room.round < 10 ? ` → 下轮 ${[3, 3, 4, 4, 5, 5, 6, 6, 6, 6][room.round] + (self.populationBonus ?? 0)}` : ''}</span>
       </div>
       <div className="duel-hud-side foe"><b>{opponent?.name ?? '对手'}</b><span className="duel-hp"><Heart size={14}/>{opponent?.hp ?? '—'}</span></div>
     </header>
     {notice && <div className="duel-notice" role="status"><Info size={14}/>{notice}<button onClick={() => setNotice('')} aria-label="关闭"><X size={12}/></button></div>}
+    {/* 星契对双方公开：对手已选的强化是侦察信息的一部分，未选候选不泄露。 */}
+    {(self.augments.length > 0 || (opponent?.augments.length ?? 0) > 0) && <div className="duel-augment-strip" aria-label="本局星契">
+      <div className="mine"><b>我方星契</b>{self.augments.map(id => {
+        const augment = AUGMENT_MAP[id];
+        return augment ? <span key={id} className="duel-augment-chip" data-tier={augment.tier} title={augment.description}>{augment.name}</span> : null;
+      })}{!self.augments.length && <span className="fineprint">尚未选择</span>}</div>
+      <div className="foe"><b>对方星契</b>{(opponent?.augments ?? []).map(id => {
+        const augment = AUGMENT_MAP[id];
+        return augment ? <span key={id} className="duel-augment-chip" data-tier={augment.tier} title={augment.description}>{augment.name}</span> : null;
+      })}{!(opponent?.augments ?? []).length && <span className="fineprint">尚未选择</span>}</div>
+    </div>}
 
     <div className="duel-main">
       <div className="duel-board-wrap">
@@ -512,6 +548,21 @@ export default function DuelArena({ userId, cards, onRewardClaimed, onBack }: { 
       </div>
 
       <aside className="duel-side">
+        {self.pendingAugmentOffer && inPlanning && <div className="duel-augment-choice" data-tier={self.pendingAugmentOffer.tier} aria-label="星契三选一">
+          <b><Sparkles size={14}/> {AUGMENT_TIERS[self.pendingAugmentOffer.tier].name}：三选一</b>
+          <p className="fineprint">仅本局有效；已选星契对对手公开，未选候选不公开。本阶段结束前未选将按候选顺序自动选第一项。</p>
+          <div className="duel-augment-candidates">
+            {self.pendingAugmentOffer.candidates.map(id => {
+              const augment = AUGMENT_MAP[id];
+              if (!augment) return null;
+              return <button key={id} disabled={busy} onClick={() => void command('augment.select', { augmentId: id })}>
+                <span className="duel-augment-tier" data-tier={augment.tier}>{AUGMENT_TIERS[augment.tier].name} · {AUGMENT_CATEGORY_NAMES[augment.category]}</span>
+                <b>{augment.name}</b>
+                <small>{augment.description}</small>
+              </button>;
+            })}
+          </div>
+        </div>}
         {self.pendingItemChoice && inPlanning && <div className="duel-item-choice" aria-label="装备三选一">
           <b><Sparkles size={14}/> 野怪补给：选择一件临时装备</b>
           <p className="fineprint">免费、仅本局有效；本阶段结束时未选将按固定顺序自动放入背包（不自动穿戴）。</p>
@@ -525,10 +576,21 @@ export default function DuelArena({ userId, cards, onRewardClaimed, onBack }: { 
           </div>
         </div>}
         {inPlanning && <>
+          <div className="duel-synergies" aria-label="当前羁绊">
+            <b>羁绊（按不同卡种计数）</b>
+            <div className="duel-synergy-list">
+              {synergyList.map(synergy => <span key={synergy.id} className={'duel-synergy' + (synergy.active ? ' active' : '')} title={synergy.description}>
+                {synergyLabel(synergy.id, synergy.name)} <b>{synergy.count}/{synergy.threshold}</b>{synergy.active ? ' ✓' : ''}
+              </span>)}
+              {!synergyList.length && <span className="fineprint">上阵后显示羁绊进度；星契徽记会追加计数。</span>}
+            </div>
+          </div>
           <div className="duel-shop" aria-label="商店">
             <div className="duel-shop-head">
-              <b>商店（5 格）</b>
-              <button className="secondary-button" disabled={busy || self.gold < 10} onClick={() => void command('reroll', {})}>刷新 10 金</button>
+              <b>商店（{self.shop.length}/{self.shopSlots} 格）</b>
+              <button className="secondary-button" disabled={busy || (self.freeRerolls <= 0 && self.gold < self.rerollCost)} onClick={() => void command('reroll', {})}>
+                {self.freeRerolls > 0 ? `免费刷新（${self.freeRerolls}）` : `刷新 ${self.rerollCost} 金`}
+              </button>
               <button className={self.shopLocked ? 'gold-button' : 'secondary-button'} disabled={busy} onClick={() => void command('lock', { locked: !self.shopLocked })}>{self.shopLocked ? '已锁店' : '锁店'}</button>
             </div>
             {self.shop.map(offer => <button key={offer.offerId} className="duel-offer" disabled={busy || self.gold < offer.cost} onClick={() => void command('buy', { offerId: offer.offerId })}>
@@ -550,7 +612,7 @@ export default function DuelArena({ userId, cards, onRewardClaimed, onBack }: { 
             </div>)}
           </div>
           <div className="duel-items" aria-label="装备背包">
-            <b>装备背包（含穿戴中 {self.items.length}）</b>
+            <b>装备背包（含穿戴中 {self.items.length}）· {self.itemSlots} 槽 / 单位</b>
             <div className="duel-item-list">
               {self.items.map(item => {
                 const equippedBy = self.roster.find(u => u.equippedItemIds.includes(item.itemId));
@@ -563,7 +625,7 @@ export default function DuelArena({ userId, cards, onRewardClaimed, onBack }: { 
                   {equippedBy && <button className="secondary-button" disabled={busy} onClick={() => void command('item.unequip', { itemId: item.itemId })}>卸下</button>}
                 </div>;
               })}
-              {!self.items.length && <p className="fineprint">野怪补给的三选一装备会出现在这里；两槽 / 单位，同组不重复，拆卸免费。</p>}
+              {!self.items.length && <p className="fineprint">野怪补给的三选一装备会出现在这里；{self.itemSlots} 槽 / 单位，同组不重复，拆卸免费。</p>}
             </div>
           </div>
         </>}

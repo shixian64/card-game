@@ -1429,3 +1429,18 @@ Q2 / Q3 与 Q4 / Q5 可以作为不同工作切片，但接口及负责人先约
 - **主代理**：确认用户需求、定义接口、处理共享入口 / 配置文件、集成、全量验证、实际验收。
 
 共享 `CombatApp.tsx`、`data.ts`、package文件和公共CSS应指定单一负责人。开始前声明改哪些文件；结束时报告diff、测试和遗留问题。不要让几个代理同时重写同一文件，也不要以并行数量替代一次可玩的闭环验收。
+
+## 24. 2026-10-18 增量：星契（海克斯强化）与镜像公平修复
+
+**状态：代码、服务端、静态 UI 与测试已实现；`npm test` 685/685 通过；未执行构建，未做浏览器实机走完一局。** 设计全文见 [星契设计](AUGMENT_GAME_SYSTEM_DESIGN.md)。
+
+- **星契**：`src/augments.ts` 定义 20 张（微光 / 星辉 / 星冕），R2 / R5 / R8 各一次三选一；双方同候选、每档 1 张、已选公开、到期自动选第一项；仅本局生效，不进收藏 / 市场 / 奖励。
+- **效果**：经济（金币 / 利息 / 合星赏金）、商店（刷新价 / 商店格 / 免费刷新）、战斗（生命 / 攻击 / 护盾 / 职业加成）、羁绊（属性 / 职业 / 全体计数 +1）、装备（强化倍率 / 第三四槽 / 额外候选）、人口（第六席 7 人）。
+- **服务端**：`server/duel.mjs` 的 participant state 增加 `augments / pendingAugmentOffer / freeRerolls / populationBonus`；不新增表；视图增加 `augments / pendingAugmentOffer / rerollCost / freeRerolls / shopSlots / itemSlots / populationBonus`；对手仅公开已选星契。
+- **战斗**：`src/duel-sim.ts` 接受双方 `augments`，按“装备 → 星契 → 羁绊”层应用；`src/battle.ts` 的 `getSynergies` 支持 7 人；`src/equipment.ts` 支持装备效果倍率与动态槽位。
+- **羁绊面板**：`DuelArena.tsx` 新增与内核同源的 `getSynergies` 面板，补上此前对局页看不到羁绊进度的缺口。
+- **镜像公平修复**：走位平局的物理列号排序在 180° 旋转下会固定偏向一侧；本轮新增 `laneCol` 阵营相对列，仅影响平局次序。修复前换序镜像 A=0 / B=200，修复后 A=100 / B=100（`tests/duel-sim.test.ts` B05b）。
+- **规则版本**：`DUEL_RULES_VERSION=2`；新房间 `rules_version=2`，v1 存续局不生成星契且走位保持旧规则；`scripts/opt0-baseline.mjs` 固定以 v1 重放黄金基线，不覆盖旧证据。
+- **测试隔离**：`createDuelService({ augmentsEnabled:false })` 仅用于既有全量回归的固定基线；生产默认开启，不是玩家模式选择器。
+- **未验证**：构建 / 浏览器实机 / 小横屏滚动 / 面板遮挡；非镜像阵容胜率矩阵；战斗类星契可能偏强；公开匹配、强化重掷、英雄强化、共享卡池 / 选秀均未做。
+- **新增脚本**：`scripts/augment-combat-sim.mjs`（镜像战斗体检，起测证据，不是平衡结论）。

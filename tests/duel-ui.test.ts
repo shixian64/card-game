@@ -42,6 +42,22 @@ test('装备与商店 UI：三选一、两槽穿戴、免费卸下、买格不�
   assert.ok(duelText.includes('不自动穿戴'), '到期自动入背包不自动穿戴的说明');
 });
 
+test('星契 UI：三选一、自动选择说明、双方已选公开、动态商店格 / 刷新价', () => {
+  assert.ok(duelText.includes("command('augment.select'"), '星契选择必须走服务端命令');
+  assert.ok(duelText.includes('pendingAugmentOffer'), '消费服务端待选星契');
+  assert.ok(duelText.includes('本阶段结束前未选将按候选顺序自动选第一项'));
+  assert.ok(duelText.includes('对方星契'), '已选星契对对手公开');
+  assert.ok(duelText.includes('self.shopSlots') && duelText.includes('self.rerollCost'), '商店格 / 刷新价读服务端');
+  assert.ok(duelText.includes('self.freeRerolls'), '免费刷新按服务端剩余次数');
+});
+
+test('羁绊面板：与战斗内核同源计数，星契徽记追加后显示', () => {
+  assert.ok(duelText.includes('getSynergies'), '羁绊面板复用战斗内核 getSynergies');
+  assert.ok(duelText.includes('applyAugmentTraitBonuses'), '星契徽记在面板中追加计数');
+  assert.ok(duelText.includes('duel-synergies'), '羁绊面板可被样式与测试定位');
+  assert.ok(duelText.includes('按不同卡种计数'), '面板说明不让人误解为重复卡凑羁绊');
+});
+
 test('终局与投降：一次结算视图、局内资产不带出说明', () => {
   assert.ok(duelText.includes('投降'));
   assert.ok(duelText.includes('不带入永久资产') || duelText.includes('全部清零'));

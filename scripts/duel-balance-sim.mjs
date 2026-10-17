@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url';
 import { simulateDuel } from '../src/duel-sim.ts';
 import { buildNeutralUnits } from '../src/neutral.ts';
 import { createBattle } from '../src/battle.ts';
-import { duelRoundRule, DUEL_ROUNDS, DUEL_QUALITY, DUEL_STARS, DUEL_GOLD, duelNeutralCamp } from '../src/duel-rules.ts';
+import { duelRoundRule, DUEL_ROUNDS, DUEL_QUALITY, DUEL_STARS, DUEL_GOLD, duelNeutralCamp, DUEL_RULES_VERSION } from '../src/duel-rules.ts';
 import { getCombatStats } from '../src/battle.ts';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -31,7 +31,7 @@ function sideOf(units) { return { units, formation: units.map((u, i) => ({ unitI
 function fight(teamA, teamB, seeds, maxRounds) {
   let a = 0, b = 0, draw = 0;
   for (const seed of seeds) {
-    const sim = simulateDuel({ roundNumber: 5, combatSeed: seed, sideA: sideOf(teamA), sideB: sideOf(teamB), ...(maxRounds ? { maxLogicalRounds: maxRounds } : {}) });
+    const sim = simulateDuel({ roundNumber: 5, combatSeed: seed, rulesVersion: DUEL_RULES_VERSION, sideA: sideOf(teamA), sideB: sideOf(teamB), ...(maxRounds ? { maxLogicalRounds: maxRounds } : {}) });
     if (sim.winner === 'A') a++; else if (sim.winner === 'B') b++; else draw++;
   }
   return { a, b, draw, aRate: +(a / seeds.length).toFixed(4), n: seeds.length };
@@ -196,13 +196,13 @@ function runMatch(strategyA, strategyB, baseSeed, options = {}) {
     if (rule.kind === 'neutral') {
       const camp = buildNeutralUnits(round);
       const neutralSide = { units: camp.map(m => ({ kind: 'neutral', ...m })), formation: camp.map(m => ({ unitId: m.unitId, localSlot: m.localSlot })) };
-      const simA = simulateDuel({ roundNumber: round, combatSeed, sideA: a.sideInput(), sideB: neutralSide });
-      const simB = simulateDuel({ roundNumber: round, combatSeed: xorshift(combatSeed), sideA: b.sideInput(), sideB: neutralSide });
+      const simA = simulateDuel({ roundNumber: round, combatSeed, rulesVersion: DUEL_RULES_VERSION, sideA: a.sideInput(), sideB: neutralSide });
+      const simB = simulateDuel({ roundNumber: round, combatSeed: xorshift(combatSeed), rulesVersion: DUEL_RULES_VERSION, sideA: b.sideInput(), sideB: neutralSide });
       const camp2 = duelNeutralCamp(round);
       for (const [p, sim] of [[a, simA], [b, simB]]) { p.gold += camp2.guaranteedGold; if (sim.winner === 'A') p.gold += camp2.winBonusGold; }
       outcome = { kind: 'neutral', aWon: simA.winner === 'A', bWon: simB.winner === 'B' };
     } else {
-      const sim = simulateDuel({ roundNumber: round, combatSeed, sideA: a.sideInput(), sideB: b.sideInput() });
+      const sim = simulateDuel({ roundNumber: round, combatSeed, rulesVersion: DUEL_RULES_VERSION, sideA: a.sideInput(), sideB: b.sideInput() });
       if (sim.winner === 'A') b.hp = Math.max(0, b.hp - rule.pvpLossHp);
       else if (sim.winner === 'B') a.hp = Math.max(0, a.hp - rule.pvpLossHp);
       if (round < 10) { a.gold += 2; b.gold += 2; }

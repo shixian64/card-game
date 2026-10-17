@@ -83,6 +83,8 @@ export const ROLE_BASE_STATS: Readonly<Record<string,RoleDef>> = ROLES;
 export const CARD_COMBAT_DEFS: Readonly<Record<string,CardCombatDef>> = CARD_COMBAT;
 export const DEFAULT_BATTLE_SLOTS:ReadonlyArray<number> = Object.freeze([1,3,5,22,24,26]);
 const ROLE_IDS:Record<CombatRole,string> = {坦克:'tank',战士:'warrior',射手:'marksman',法师:'mage',刺客:'assassin'};
+// 星契的羁绊强化需要稳定的 id 映射；导出只读别名，避免 UI / 战斗 / 星契各写一份。
+export const ROLE_SYNERGY_IDS:Readonly<Record<CombatRole,string>> = ROLE_IDS;
 const ROLE_TEXT:Record<CombatRole,string> = {坦克:'坦克最大生命 +8%。',战士:'战士攻击 +12%。',射手:'射手每次普攻额外获得 10 能量。',法师:'法师技能伤害 +15%。',刺客:'刺客技能伤害 +15%。'};
 const AFFINITY_TEXT:Record<Affinity,[string,string]> = {
   moon:['月系开场获得最大生命 12% 的护盾。','月系开场获得最大生命 25% 的护盾，替代 2 月效果。'],
@@ -114,9 +116,9 @@ export function getCombatStats(card:BattleCard):CombatStats {
   return {...base,hp:Math.round(base.hp*(1+(quality-1)*QUALITY.growth.hp/100)*(1+(stars-1)*.12)),attack:decimal(base.attack*(1+(quality-1)*QUALITY.growth.attack/100)*(1+(stars-1)*.08)),
     skillPower,skillSecondary,skillName:variant.skillName,skillDescription:skillText(base.role,variant,skillPower,skillSecondary),range:variant.range??base.range,armor:variant.armor??base.armor,resistance:variant.resistance??base.resistance};
 }
-/** Distinct definitions, not repeated copies, activate bonds. */
-export function getSynergies(team:BattleCard[]):Synergy[] {
-  ensure(Array.isArray(team)&&team.length<=6,'阵容最多 6 张卡牌');for(const card of team)checkCard(card);
+/** Distinct definitions, not repeated copies, activate bonds. maxUnits 供双人局「第六席」放宽到 7，旧局默认 6。 */
+export function getSynergies(team:BattleCard[],maxUnits=6):Synergy[] {
+  ensure(Array.isArray(team)&&team.length<=maxUnits,'阵容最多 '+maxUnits+' 张卡牌');for(const card of team)checkCard(card);
   const distinct=[...new Map(team.map(card=>[card.defId,card])).values()],result:Synergy[]=[];
   for(const affinity of ['moon','sun','forest'] as const){
     const count=distinct.filter(card=>CARD_MAP[card.defId].affinity===affinity).length;

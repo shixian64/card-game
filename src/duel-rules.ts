@@ -1,9 +1,10 @@
-// 短局 1v1 主对局规则配置（DUEL-RULES-1，起测默认值，未经用户最终确认）。
+// 短局 1v1 主对局规则配置（DUEL-RULES-2，起测默认值，未经用户最终确认）。
 // 来源：docs/references/duel-rules-draft-20261014.json / docs/SHORT_DUEL_GAME_SYSTEM_DESIGN.md。
 // 本文件是双人主对局的唯一规则数值来源：房间节奏、品质价格、星级倍率、金币供给、
 // 野怪营地与永久奖励全部集中在此；旧单人局（server/match.mjs MATCH_RULES v3）不读取本表，
 // 旧局价格 / 星级 / 回合不受影响。
-export const DUEL_RULES_VERSION = 1;
+// v2：新增「星契」并修复 180° 镜像下走位平局按物理列固定偏向一侧的问题；v1 存续局仍按 v1 结算。
+export const DUEL_RULES_VERSION = 2;
 
 export type RoundKind = 'neutral' | 'pvp';
 export interface DuelRoundRule {

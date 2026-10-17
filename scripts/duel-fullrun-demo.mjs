@@ -43,7 +43,7 @@ const formationFor = (state, population) => {
   let front = 0, back = 0;
   return units.map(u => {
     const tankLike = ['moon-deer', 'star-deer', 'crescent-dancer', 'starlit-arch', 'comet-tail', 'moon-soloist', 'eclipse-deer'].includes(u.defId);
-    return { unitId: u.unitId, localSlot: tankLike || front < 2 ? [1, 3, 5, 8, 10, 12][Math.min(front++, 5)] : [22, 24, 26, 15, 17, 19][Math.min(back++, 5)] };
+    return { unitId: u.unitId, localSlot: tankLike || front < 2 ? [1, 3, 5, 8, 10, 12, 2][Math.min(front++, 6)] : [22, 24, 26, 15, 17, 19, 21][Math.min(back++, 6)] };
   });
 };
 const playPlanning = (room, user, aggressive) => {
@@ -52,12 +52,14 @@ const playPlanning = (room, user, aggressive) => {
   const affordable = state.shop.filter(o => o.cost <= state.gold).sort((a, b) => b.quality - a.quality)[0];
   if (affordable && (aggressive || state.gold - affordable.cost >= 10)) command(room, user, 'buy', { offerId: affordable.offerId }, view.room.phaseId, view.self.playerRevision);
   view = duel.view(user, room);
+  const augment = view.self.pendingAugmentOffer;
+  if (augment) { command(room, user, 'augment.select', { augmentId: augment.candidates[0] }, view.room.phaseId, view.self.playerRevision); view = duel.view(user, room); }
   const pending = view.self.pendingItemChoice;
   if (pending) { command(room, user, 'item.select', { itemDefId: pending.candidates[0] }, view.room.phaseId, view.self.playerRevision); view = duel.view(user, room); }
   const fresh = read(room, user);
   if (fresh.items.length && fresh.roster.length) {
     const item = fresh.items.find(i => !fresh.roster.some(u => (u.equippedItemIds ?? []).includes(i.itemId)));
-    const unit = fresh.roster.find(u => (u.equippedItemIds ?? []).length < 2);
+    const unit = fresh.roster.find(u => (u.equippedItemIds ?? []).length < (view.self.itemSlots ?? 2));
     if (item && unit) { try { command(room, user, 'item.equip', { itemId: item.itemId, unitId: unit.unitId }, view.room.phaseId, view.self.playerRevision); view = duel.view(user, room); } catch { /* 两槽/同组限制 */ } }
   }
   const latest = read(room, user);

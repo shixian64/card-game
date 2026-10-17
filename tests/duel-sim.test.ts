@@ -10,9 +10,9 @@ import { DUEL_ROUNDS, DUEL_THEORETICAL_DURATION_SEC, DUEL_TOTAL_GUARANTEED_GOLD,
 function unit(defId: string, quality = 1, stars: 1 | 2 | 3 = 1, items: string[] = [], unitId = defId): DuelCardUnitInput {
   return { unitId, defId, quality, stars, itemDefIds: items };
 }
-function duel(seed: number, sideA: { units: DuelCardUnitInput[]; slots: number[] }, sideB: { units: DuelCardUnitInput[]; slots: number[] }, maxLogicalRounds?: number): DuelSimResult {
+function duel(seed: number, sideA: { units: DuelCardUnitInput[]; slots: number[] }, sideB: { units: DuelCardUnitInput[]; slots: number[] }, maxLogicalRounds?: number, rulesVersion = 1): DuelSimResult {
   const input: DuelSimInput = {
-    roundNumber: 1, combatSeed: seed,
+    roundNumber: 1, combatSeed: seed, rulesVersion,
     sideA: { units: sideA.units, formation: sideA.units.map((u, i) => ({ unitId: u.unitId, localSlot: sideA.slots[i] })) },
     sideB: { units: sideB.units, formation: sideB.units.map((u, i) => ({ unitId: u.unitId, localSlot: sideB.slots[i] })) },
   };
@@ -26,7 +26,7 @@ const MIRROR_TEAM = (): DuelCardUnitInput[] => [
 const MIRROR_SLOTS = [1, 3, 5, 22, 24, 26];
 
 test('规则配置：十轮 555 秒、价格 10–14、保底供给 286、R1/R4/R7 野怪', () => {
-  assert.equal(DUEL_RULES_VERSION, 1);
+  assert.equal(DUEL_RULES_VERSION, 2);
   assert.equal(DUEL_ROUNDS.length, 10);
   assert.equal(DUEL_THEORETICAL_DURATION_SEC, 555);
   assert.deepEqual(DUEL_ROUNDS.map(r => r.kind), ['neutral', 'pvp', 'pvp', 'neutral', 'pvp', 'pvp', 'neutral', 'pvp', 'pvp', 'pvp']);
@@ -98,6 +98,20 @@ test('B05：真镜像换边不系统偏置（6v6 200 种子，A/B 胜率接近�
   // 允许统计带宽 ±10%；镜像阵容两侧机制完全对称。
   assert.ok(Math.abs(a - b) <= 20, `镜像偏置过大：A=${a} B=${b} draw=${draw}`);
   assert.equal(a + b + draw, 200);
+});
+
+test('B05b：远程顺序变化也不能让固定一侧系统性获胜（走位平局用阵营相对列）', () => {
+  // 这是评审发现的旧问题：把 sun-cub 放在 sun-fox 前面时，180° 旋转后的列号平局曾让 A 方 100% 落败。
+  const swapped = (): DuelCardUnitInput[] => [
+    unit('moon-deer', 1, 1, [], 'u1'), unit('forest-rabbit', 1, 1, [], 'u2'), unit('moon-fawn', 1, 1, [], 'u3'),
+    unit('sun-cub', 1, 1, [], 'u4'), unit('sun-fox', 1, 1, [], 'u5'), unit('forest-sprout', 1, 1, [], 'u6'),
+  ];
+  let a = 0, b = 0;
+  for (let seed = 1; seed <= 200; seed++) {
+    const result = duel(seed, { units: swapped(), slots: MIRROR_SLOTS }, { units: swapped(), slots: MIRROR_SLOTS }, undefined, 2);
+    if (result.winner === 'A') a++; else if (result.winner === 'B') b++;
+  }
+  assert.ok(Math.abs(a - b) <= 20, `换序后镜像偏置过大：A=${a} B=${b}`);
 });
 
 test('新星级倍率：HP 1/1.35/1.8、攻击 1/1.25/1.6，品质星级两层各算一次', () => {

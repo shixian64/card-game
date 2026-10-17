@@ -1,6 +1,8 @@
 /* 双人短局主对局 UI（DUEL-RULES-1）。沿用 combat-app 的暗色基调与按钮体系；
    布局保持功能优先：HUD / 棋盘 / 商店 / 背包 / 回放。 */
 .duel-lobby,.duel-lobby-room,.duel-arena,.duel-finished{min-height:100%;display:flex;flex-direction:column;gap:14px;}
+/* 星契三选一与 6 格商店会增加侧栏高度：对战页允许内部滚动，不裁掉棋盘或按钮。 */
+.duel-arena{max-height:100dvh;overflow-y:auto;padding-bottom:12px;}
 .duel-lobby-copy{max-width:640px;margin:auto;text-align:center;display:flex;flex-direction:column;gap:14px;padding:32px 16px;}
 .duel-lobby-copy h1{font-size:30px;}
 .duel-lobby-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
@@ -84,3 +86,25 @@
   .duel-lobby-copy h1{font-size:24px;}
 }
 .duel-finished-actions{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;}
+
+/* ── 星契（海克斯强化式三选一）与羁绊面板 ─────────────────────────────── */
+.duel-augment-strip{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:13px;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:8px 12px;background:rgba(12,16,28,.35);}
+.duel-augment-strip>div{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.duel-augment-strip b{color:var(--ink-soft,#b9c2d4);font-weight:600;}
+.duel-augment-chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;border:1px solid currentColor;font-size:12px;line-height:1.5;}
+.duel-augment-chip[data-tier="1"]{color:#9aa3b2;}
+.duel-augment-chip[data-tier="2"]{color:#a98bdf;}
+.duel-augment-chip[data-tier="3"]{color:#d9b75a;}
+.duel-augment-choice{border:1px solid #d9c589;border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px;background:rgba(217,197,137,.06);}
+.duel-augment-choice[data-tier="2"]{border-color:#8f6bd0;background:rgba(143,107,208,.07);}
+.duel-augment-choice[data-tier="3"]{border-color:#c9a13b;background:rgba(201,161,59,.08);}
+.duel-augment-candidates{display:grid;grid-template-columns:1fr;gap:8px;}
+.duel-augment-candidates button{display:flex;flex-direction:column;gap:4px;align-items:flex-start;padding:8px;border-radius:10px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:inherit;cursor:pointer;text-align:left;}
+.duel-augment-candidates button:hover{border-color:rgba(217,197,137,.55);}
+.duel-augment-candidates small{color:var(--ink-soft,#b9c2d4);text-align:left;}
+.duel-augment-tier{font-size:11px;letter-spacing:.06em;color:var(--ink-soft,#b9c2d4);}
+.duel-synergies{border:1px solid rgba(255,255,255,.1);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:8px;background:rgba(12,16,28,.45);}
+.duel-synergy-list{display:flex;flex-wrap:wrap;gap:6px;}
+.duel-synergy{font-size:12px;padding:2px 8px;border-radius:8px;background:rgba(255,255,255,.06);color:#b9c2d4;border:1px solid transparent;}
+.duel-synergy b{font-weight:600;}
+.duel-synergy.active{background:rgba(127,174,134,.18);color:#a8d3ae;border-color:rgba(127,174,134,.4);}

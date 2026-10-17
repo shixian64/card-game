@@ -12,6 +12,10 @@ import { simulateDuel } from '../src/duel-sim.ts';
 import { buildNeutralUnits } from '../src/neutral.ts';
 import { validateEquip, duelItemDef, DUEL_ITEMS, DUEL_EQUIPMENT } from '../src/equipment.ts';
 import {
+  AUGMENTS, AUGMENT_MAP, AUGMENT_CHOICES, AUGMENT_MAX, augmentTierForRound,
+  aggregateAugmentEffects,
+} from '../src/augments.ts';
+import {
   DUEL_RULES_VERSION, DUEL_ROUNDS, duelRoundRule, duelShopPrice, DUEL_LOADOUT, DUEL_GOLD,
   DUEL_STARS, DUEL_NEUTRAL_CAMPS, duelNeutralCamp, DUEL_REWARD, DUEL_ROOM,
 } from '../src/duel-rules.ts';
@@ -30,6 +34,8 @@ const ABORT_REASONS = new Set(['tick_failure', 'service_interrupted', 'disconnec
 export function createDuelService(db, options = {}) {
   const now = options.now ?? Date.now;
   const secureRandom = options.secureRandom ?? (() => randomBytes(4).readUInt32LE(0) / 4294967296);
+  // 星契默认开启；关闭仅用于既有全量回归的固定基线 / 隔离测试，不是产品模式。
+  const augmentsEnabled = options.augmentsEnabled ?? true;
   let inTransaction = false;
   function transaction(fn) {
     if (inTransaction) return fn();
@@ -131,12 +137,20 @@ export function createDuelService(db, options = {}) {
       shop: [], shopLocked: false, roster: [], formation: [], items: [],
       nextUnit: 1, nextItem: 1, rng: Math.floor(secureRandom() * 4294967296) >>> 0,
       activity: { meaningfulRounds: [], deployedDefIds: [] }, lastIncome: null, pendingItemChoiceId: null,
+      // 星契（仅本局）：已选、待选三选一、本轮免费刷新次数、人口加成。
+      augments: [], pendingAugmentOffer: null, freeRerolls: 0, populationBonus: 0,
     };
   }
+  // 星契聚合只读 state，最多三个 id；所有派生值都从同一张表计算，避免 UI / 服务端口径分叉。
+  function augmentEffectsOf(state) { return aggregateAugmentEffects(state.augments ?? []); }
+  function effectiveShopSlots(state) { return DUEL_LOADOUT.shopSlots + augmentEffectsOf(state).shopSlotBonus; }
+  function effectiveRerollCost(state) { return Math.max(0, DUEL_GOLD.rerollCost + augmentEffectsOf(state).rerollCostDelta); }
+  function effectiveItemSlots(state) { return DUEL_EQUIPMENT.slotsPerUnit + augmentEffectsOf(state).itemSlotBonus; }
+  function mergeGainOf(state) { return augmentEffectsOf(state).mergeGold; }
   const battleQualityOf = (loadout, defId) => loadout.defs.find(d => d.defId === defId)?.battleQuality;
   function rollShop(state, loadout) {
     const defs = loadout.defs;
-    return Array.from({ length: DUEL_LOADOUT.shopSlots }, () => {
+    return Array.from({ length: effectiveShopSlots(state) }, () => {
       const def = defs[Math.floor(nextRandom(state) * defs.length)];
       const quality = def.battleQuality;
       return { offerId: 'o' + (state.nextOffer = (state.nextOffer ?? 0) + 1), defId: def.defId, quality, cost: duelShopPrice(quality) };
@@ -148,7 +162,7 @@ export function createDuelService(db, options = {}) {
     let front = 0, back = 0;
     return units.map(unit => {
       const melee = FRONT_ROLES.includes(roleOf(unit)) || roleOf(unit) === '刺客';
-      const slot = melee ? [1, 3, 5, 8, 10, 12][front++] : [22, 24, 26, 15, 17, 19][back++];
+      const slot = melee ? [1, 3, 5, 8, 10, 12, 2][front++] : [22, 24, 26, 15, 17, 19, 21][back++];
       return { unitId: unit.unitId, localSlot: slot };
     });
   }
@@ -161,6 +175,7 @@ export function createDuelService(db, options = {}) {
   function returnItemsToInventory(state, unit) { unit.equippedItemIds = []; }
   // 局内合星：三同 defId + 同本局品质 + 同星 → 高一星；keeper 保留装备，材料装备退背包；basis 求和。
   function mergeUnits(state) {
+    let merges = 0;
     for (let stars = 1; stars < DUEL_STARS.maxStars; stars++) {
       for (const key of new Set(state.roster.map(u => u.defId + ':' + u.quality))) {
         let copies = state.roster.filter(u => u.defId + ':' + u.quality === key && u.stars === stars);
@@ -174,9 +189,51 @@ export function createDuelService(db, options = {}) {
           state.roster = state.roster.filter(u => !removed.has(u.unitId));
           state.formation = state.formation.filter(p => !removed.has(p.unitId));
           copies = state.roster.filter(u => u.defId + ':' + u.quality === key && u.stars === stars);
+          merges++;
         }
       }
     }
+    return merges;
+  }
+
+  // 星契选择：校验由命令层完成；这里只做一次性应用（人口、免费刷新、随机装备、聚合效果）。
+  function applyAugment(state, augmentId, round) {
+    const def = AUGMENT_MAP[augmentId];
+    if (!def) fail('未知星契', 400, 'AUGMENT_INVALID');
+    const owned = state.augments ?? [];
+    if (owned.includes(augmentId)) fail('已经拥有这张星契', 409, 'AUGMENT_OWNED');
+    if (owned.length >= AUGMENT_MAX) fail('星契数量已达上限', 409, 'AUGMENT_LIMIT');
+    state.augments = [...owned, augmentId];
+    const effects = aggregateAugmentEffects(state.augments);
+    state.populationBonus = effects.populationBonus;
+    state.population = duelRoundRule(round).population + state.populationBonus;
+    state.freeRerolls = (state.freeRerolls ?? 0) + effects.grantFreeRerolls;
+    if (effects.freeRerollsPerRound > 0) state.freeRerolls = Math.max(state.freeRerolls, effects.freeRerollsPerRound);
+    let granted = 0;
+    for (let index = 0; index < effects.grantRandomItems; index++) {
+      if (state.items.length >= DUEL_EQUIPMENT.totalInstanceLimit) break;
+      const itemDef = DUEL_ITEMS[Math.floor(nextRandom(state) * DUEL_ITEMS.length)];
+      state.items.push({ itemId: 'i' + state.nextItem++, itemDefId: itemDef.id, kind: 'complete' });
+      granted++;
+    }
+    state.pendingAugmentOffer = null;
+    return { effects, granted };
+  }
+  // 同一轮双方共用一组候选（公平 / 可复盘）；候选与过期阶段一并持久化，重开浏览器不重抽。
+  function offerAugments(room, nextRound) {
+    // v1 存续房间不生成星契：规则版本隔离，不能把新玩法塞进旧局。
+    const tier = augmentsEnabled && room.rules_version >= 2 ? augmentTierForRound(nextRound) : null;
+    if (!tier) return null;
+    const remaining = AUGMENTS.filter(augment => augment.tier === tier);
+    const candidates = [];
+    const roomState = { rng: room.rng };
+    for (let index = 0; index < AUGMENT_CHOICES && remaining.length; index++) {
+      const pick = Math.floor(nextRandom(roomState) * remaining.length);
+      candidates.push(remaining[pick].id);
+      remaining.splice(pick, 1);
+    }
+    db.prepare('UPDATE duel_rooms SET rng=? WHERE id=?').run(roomState.rng, room.id);
+    return { round: nextRound, tier, candidates, expiresPhaseId: 'r' + nextRound + '-planning' };
   }
 
   // ── 房间创建 / 加入 / 准备 ───────────────────────────────────────────────
@@ -362,9 +419,11 @@ export function createDuelService(db, options = {}) {
       pay(offer.cost);
       state.roster.push({ unitId: 'u' + state.nextUnit++, defId: offer.defId, quality: offer.quality, stars: 1, basis: offer.cost, equippedItemIds: [] });
       state.shop.splice(index, 1); // 买一格只移走该格，不免费补格（S01）
-      mergeUnits(state);
+      const merges = mergeUnits(state);
+      const mergeGold = mergeGainOf(state);
+      if (merges && mergeGold) state.gold += merges * mergeGold;
       if (state.roster.length > DUEL_LOADOUT.rosterLimit) fail('备战区已满，请先卖出或合星', 409, 'ROSTER_FULL');
-      markActivity(state, room); summary = { bought: offer.defId };
+      markActivity(state, room); summary = { bought: offer.defId, merged: merges, mergeGold: merges * mergeGold };
     } else if (action === 'sell') {
       const unit = state.roster.find(u => u.unitId === input.payload?.unitId);
       if (!unit) fail('没有这个局内单位', 409);
@@ -374,12 +433,24 @@ export function createDuelService(db, options = {}) {
       state.formation = state.formation.filter(p => p.unitId !== unit.unitId);
       markActivity(state, room); summary = { sold: unit.defId, refunded: unit.basis ?? 0 };
     } else if (action === 'reroll') {
-      pay(DUEL_GOLD.rerollCost);
+      // 「免费重掷」星契先消耗本轮免费次数，不扣金币；折扣价最低 0。
+      const free = (state.freeRerolls ?? 0) > 0;
+      if (free) state.freeRerolls -= 1; else pay(effectiveRerollCost(state));
       state.shop = rollShop(state, loadout);
-      markActivity(state, room); summary = { rerolled: true };
+      markActivity(state, room); summary = { rerolled: true, free, cost: free ? 0 : effectiveRerollCost(state) };
     } else if (action === 'lock') {
       if (typeof input.payload?.locked !== 'boolean') fail('锁店状态不合法');
       state.shopLocked = input.payload.locked;
+    } else if (action === 'augment.select') {
+      if (!augmentsEnabled) fail('本局没有启用星契', 400, 'AUGMENT_DISABLED');
+      const offer = state.pendingAugmentOffer;
+      if (!offer) fail('当前没有待选择的星契', 409, 'AUGMENT_CHOICE_CLOSED');
+      if (offer.expiresPhaseId !== room.phase_id) fail('星契选择窗口已关闭', 409, 'AUGMENT_CHOICE_CLOSED');
+      const augmentId = input.payload?.augmentId;
+      if (typeof augmentId !== 'string' || !offer.candidates.includes(augmentId)) fail('候选中没有这张星契', 400, 'AUGMENT_INVALID');
+      const applied = applyAugment(state, augmentId, room.round_no);
+      markActivity(state, room);
+      summary = { augment: augmentId, grantedItems: applied.granted, population: state.population };
     } else if (action === 'deploy') {
       const formation = input.payload?.formation;
       if (!Array.isArray(formation) || formation.length > state.population) fail('上阵数量超过当前人口');
@@ -410,7 +481,7 @@ export function createDuelService(db, options = {}) {
       if (state.roster.some(u => (u.equippedItemIds ?? []).includes(item.itemId))) fail('该装备已被穿戴', 409, 'ITEM_NOT_OWNED');
       const unit = state.roster.find(u => u.unitId === input.payload?.unitId);
       if (!unit) fail('没有这个局内单位', 409);
-      validateEquip((unit.equippedItemIds ?? []).map(id => state.items.find(i => i.itemId === id)?.itemDefId).filter(Boolean), item.itemDefId);
+      validateEquip((unit.equippedItemIds ?? []).map(id => state.items.find(i => i.itemId === id)?.itemDefId).filter(Boolean), item.itemDefId, effectiveItemSlots(state));
       (unit.equippedItemIds ??= []).push(item.itemId);
       markActivity(state, room); summary = { equipped: item.itemDefId, unitId: unit.unitId };
     } else if (action === 'item.unequip') {
@@ -433,6 +504,7 @@ export function createDuelService(db, options = {}) {
         itemDefIds: (unit.equippedItemIds ?? []).map(id => state.items.find(i => i.itemId === id)?.itemDefId).filter(Boolean),
       })),
       formation: deployed.map(({ p }) => ({ unitId: p.unitId, localSlot: p.localSlot })),
+      augments: [...(state.augments ?? [])],
     };
   }
   function expireItemChoices(room) {
@@ -463,6 +535,15 @@ export function createDuelService(db, options = {}) {
     const sides = {};
     for (const row of members) {
       const state = playerState(row);
+      // 星契到期未选：按固定候选顺序自动选第一项（与装备 E03 同口径），不额外拖长阶段。
+      if (augmentsEnabled && state.pendingAugmentOffer) {
+        const candidate = state.pendingAugmentOffer.candidates[0];
+        if ((state.augments ?? []).length < AUGMENT_MAX && !(state.augments ?? []).includes(candidate)) {
+          applyAugment(state, candidate, room.round_no);
+        } else {
+          state.pendingAugmentOffer = null; // 迁移 / 异常数据不阻断 tick
+        }
+      }
       // 回退到双方最后合法阵容：过滤已售单位、截断超人口、空阵但有库存时自动补位。
       state.formation = state.formation.filter(p => state.roster.some(u => u.unitId === p.unitId)).slice(0, state.population);
       if (!state.formation.length && state.roster.length) state.formation = autoPlacement(state, state.population);
@@ -473,7 +554,7 @@ export function createDuelService(db, options = {}) {
     const roomState = { rng: room.rng };
     nextRandom(roomState);
     const combatSeed = roomState.rng;
-    const frozenInput = { roundNumber: room.round_no, kind: rule.kind, sides };
+    const frozenInput = { roundNumber: room.round_no, kind: rule.kind, rulesVersion: room.rules_version, sides };
     const inputHash = hashInput(frozenInput);
     db.prepare('INSERT INTO duel_rounds(room_id,round_no,kind,frozen_input,input_hash,combat_seed,status) VALUES(?,?,?,?,?,?,?)')
       .run(room.id, room.round_no, rule.kind, JSON.stringify(frozenInput), inputHash, combatSeed, 'frozen');
@@ -486,7 +567,7 @@ export function createDuelService(db, options = {}) {
     // 回放 ID 必须含轮次前缀（r{round}-pvp / r{round}-A / r{round}-B）：
     // 每轮复用 'pvp'/'A'/'B' 会让按轮次升序的回放查询永远命中旧轮。
     if (frozen.kind === 'pvp') {
-      const sim = simulateDuel({ roundNumber: frozen.roundNumber, combatSeed, sideA: frozen.sides.A, sideB: frozen.sides.B });
+      const sim = simulateDuel({ roundNumber: frozen.roundNumber, combatSeed, rulesVersion: frozen.rulesVersion ?? 1, sideA: frozen.sides.A, sideB: frozen.sides.B });
       return {
         kind: 'pvp', winner: sim.winner,
         battles: { ['r' + frozen.roundNumber + '-pvp']: sim },
@@ -495,8 +576,8 @@ export function createDuelService(db, options = {}) {
     }
     const camp = buildNeutralUnits(frozen.roundNumber);
     const neutralSide = { units: camp.map(m => ({ kind: 'neutral', ...m })), formation: camp.map(m => ({ unitId: m.unitId, localSlot: m.localSlot })) };
-    const simA = simulateDuel({ roundNumber: frozen.roundNumber, combatSeed, sideA: frozen.sides.A, sideB: neutralSide });
-    const simB = simulateDuel({ roundNumber: frozen.roundNumber, combatSeed: seedB, sideA: frozen.sides.B, sideB: neutralSide });
+    const simA = simulateDuel({ roundNumber: frozen.roundNumber, combatSeed, rulesVersion: frozen.rulesVersion ?? 1, sideA: frozen.sides.A, sideB: neutralSide });
+    const simB = simulateDuel({ roundNumber: frozen.roundNumber, combatSeed: seedB, rulesVersion: frozen.rulesVersion ?? 1, sideA: frozen.sides.B, sideB: neutralSide });
     return {
       kind: 'neutral',
       battles: { ['r' + frozen.roundNumber + '-A']: simA, ['r' + frozen.roundNumber + '-B']: simB },
@@ -529,10 +610,11 @@ export function createDuelService(db, options = {}) {
     let decided = null, decidedReason = null;
     for (const row of members) {
       const state = playerState(row);
+      const effects = augmentEffectsOf(state);
       const income = { interest: 0, neutralGuaranteed: 0, neutralWinBonus: 0, pvpSupply: 0, total: 0 };
       if (!terminal) {
         // 利息基数 = 本轮战斗前已冻结存款（战斗期禁止消费，与冻结值一致）。
-        income.interest = Math.min(DUEL_GOLD.interest.cap, Math.floor(state.gold / DUEL_GOLD.interest.per) * DUEL_GOLD.interest.step);
+        income.interest = Math.min(DUEL_GOLD.interest.cap + effects.interestCapBonus, Math.floor(state.gold / DUEL_GOLD.interest.per) * DUEL_GOLD.interest.step);
       }
       if (rule.kind === 'pvp') {
         const winner = summary.pvp?.winner ?? null;
@@ -541,9 +623,10 @@ export function createDuelService(db, options = {}) {
         if (state.hp <= 0) { decided = decided ?? (row.side === 'A' ? 'B' : 'A'); decidedReason = 'hp_zero'; }
       } else {
         const camp = duelNeutralCamp(room.round_no);
-        income.neutralGuaranteed = camp.guaranteedGold; // 成功 / 失败都发（N02）
+        // 野怪金币是保底供给；「战利品风暴」只放大这一份，不改变失败照发规则。
+        income.neutralGuaranteed = Math.round(camp.guaranteedGold * (1 + effects.neutralGoldPct));
         const won = row.side === 'A' ? summary.neutral?.A : summary.neutral?.B;
-        if (won) income.neutralWinBonus = camp.winBonusGold;
+        if (won) income.neutralWinBonus = Math.round(camp.winBonusGold * (1 + effects.neutralGoldPct));
         if (camp.guaranteedEquipmentChoice) state.pendingItemChoiceId = room.id + ':r' + room.round_no;
       }
       income.total = income.interest + income.neutralGuaranteed + income.neutralWinBonus + income.pvpSupply;
@@ -568,16 +651,27 @@ export function createDuelService(db, options = {}) {
     }
   }
   function createItemChoices(room) {
-    // 双方同三候选（进攻 / 防御 / 功能各一件）；集合落库不重开换候选（E01）。
+    // 基础三候选（进攻 / 防御 / 功能各一件）双方同集；星契的「战利品」只给本人追加候选。
     const roomState = { rng: room.rng };
     const byGroup = {};
     for (const group of ['offense', 'defense', 'utility']) {
       const pool = DUEL_ITEMS.filter(i => i.choiceGroup === group);
       byGroup[group] = pool[Math.floor(nextRandom(roomState) * pool.length)].id;
     }
-    const candidates = [byGroup.offense, byGroup.defense, byGroup.utility];
+    const base = [byGroup.offense, byGroup.defense, byGroup.utility];
     const nextPhaseId = 'r' + (room.round_no + 1) + '-planning';
     for (const row of participants(room.id)) {
+      const state = playerState(row);
+      const extra = augmentEffectsOf(state).itemCandidateBonus;
+      const candidates = [...base];
+      if (extra > 0) {
+        const remaining = DUEL_ITEMS.filter(item => !candidates.includes(item.id));
+        for (let index = 0; index < extra && remaining.length; index++) {
+          const pick = Math.floor(nextRandom(roomState) * remaining.length);
+          candidates.push(remaining[pick].id);
+          remaining.splice(pick, 1);
+        }
+      }
       db.prepare('INSERT OR IGNORE INTO duel_item_choices(room_id,round_no,user_id,candidates,status,expires_phase_id,created_at) VALUES(?,?,?,?,?,?,?)')
         .run(room.id, room.round_no, row.user_id, JSON.stringify(candidates), 'pending', nextPhaseId, now());
     }
@@ -586,10 +680,15 @@ export function createDuelService(db, options = {}) {
   function nextPlanning(room) {
     const nextRound = room.round_no + 1;
     const rule = duelRoundRule(nextRound);
+    const offer = offerAugments(room, nextRound);
     for (const row of participants(room.id)) {
       const state = playerState(row);
-      state.population = rule.population; // 人口按轮次自动 3→4→5→6，无 XP（G04）
-      if (nextRound >= DUEL_GOLD.baseFromRound) state.gold += DUEL_GOLD.basePerRound;
+      const effects = augmentEffectsOf(state);
+      state.population = rule.population + effects.populationBonus; // 人口按轮次自动 3→4→5→6 + 星契加成（G04）
+      if (nextRound >= DUEL_GOLD.baseFromRound) state.gold += DUEL_GOLD.basePerRound + effects.goldPerRound;
+      state.freeRerolls = effects.freeRerollsPerRound > 0 ? effects.freeRerollsPerRound : (state.freeRerolls ?? 0); // 每轮刷新不累计；一次性赠送可跨轮保留
+      const hasTier = offer && (state.augments ?? []).some(id => AUGMENT_MAP[id]?.tier === offer.tier);
+      state.pendingAugmentOffer = offer && !hasTier ? { ...offer } : null;
       if (!state.shopLocked) state.shop = rollShop(state, parse(row.loadout)); // 备战开始免费刷新一次；锁店保留剩余格不补满（S02）
       writeParticipant(row, state);
     }
@@ -819,10 +918,12 @@ export function createDuelService(db, options = {}) {
         // 取消对局不展示战斗统计；这些空值仅用于保持视图结构，不冒充真实最终生命。
         hp: 0, gold: 0, population: 0, shop: [], shopLocked: false, roster: [], formation: [], items: [],
         lastIncome: null, activity: { meaningfulRounds: [], deployedDefIds: [] }, pendingItemChoice: null,
+        augments: [], pendingAugmentOffer: null, rerollCost: DUEL_GOLD.rerollCost, freeRerolls: 0,
+        shopSlots: DUEL_LOADOUT.shopSlots, itemSlots: DUEL_EQUIPMENT.slotsPerUnit, populationBonus: 0,
         reward: reward ? { base: reward.base, factor: reward.factor, actualCoins: reward.actual_coins, reason: reward.reason }
           : { base: 0, factor: 0, actualCoins: 0, reason: 'service_abort' },
       },
-      opponent: opponent ? { side: opponent.side, name: opponent.name, ready: false, loadout: null, hp: 0, population: 0 } : null,
+      opponent: opponent ? { side: opponent.side, name: opponent.name, ready: false, loadout: null, hp: 0, population: 0, augments: [] } : null,
       scout: null, currentBattle: null,
     };
   }
@@ -867,12 +968,18 @@ export function createDuelService(db, options = {}) {
         shop: state.shop, shopLocked: state.shopLocked, roster: state.roster, formation: state.formation,
         items: state.items, lastIncome: state.lastIncome, activity: { meaningfulRounds: state.activity.meaningfulRounds, deployedDefIds: state.activity.deployedDefIds },
         pendingItemChoice: pendingChoice ? { round: pendingChoice.round_no, candidates: parse(pendingChoice.candidates), expiresPhaseId: pendingChoice.expires_phase_id, status: pendingChoice.status } : null,
+        augments: state.augments ?? [], pendingAugmentOffer: state.pendingAugmentOffer ?? null,
+        rerollCost: effectiveRerollCost(state), freeRerolls: state.freeRerolls ?? 0,
+        shopSlots: effectiveShopSlots(state), itemSlots: effectiveItemSlots(state), populationBonus: state.populationBonus ?? 0,
         reward: rewardRow ? { base: rewardRow.base, factor: rewardRow.factor, actualCoins: rewardRow.actual_coins, reason: rewardRow.reason } : null,
       },
-      opponent: others.map(m => ({
-        side: m.side, name: m.name, ready: !!m.ready, loadout: m.ready && m.loadout ? parse(m.loadout) : null,
-        hp: playerState(m).hp, population: playerState(m).population,
-      }))[0] ?? null,
+      opponent: others.map(m => {
+        const opponentState = playerState(m);
+        return {
+          side: m.side, name: m.name, ready: !!m.ready, loadout: m.ready && m.loadout ? parse(m.loadout) : null,
+          hp: opponentState.hp, population: opponentState.population, augments: opponentState.augments ?? [],
+        };
+      })[0] ?? null,
       scout: opponentScout,
       currentBattle: roundRow && roundRow.status !== 'frozen' ? {
         round: roundRow.round_no, kind: roundRow.kind, status: roundRow.status,
